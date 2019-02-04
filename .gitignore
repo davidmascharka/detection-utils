@@ -1,0 +1,6 @@
+# python garbage
+__pycache__
+*.egg-info
+
+# testing
+.hypothesis
