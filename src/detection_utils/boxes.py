@@ -231,7 +231,7 @@ def non_max_suppression(detections, threshold=0.7, clip_value=1e6, eps=1e-12):
     x2s = detections[:, 2]
     y2s = detections[:, 3]
 
-    areas = np.clip(x2s - x1s, 0, 10**6) * np.clip(y2s - y1s, 0, 10**6)
+    areas = np.clip(x2s - x1s, 0, clip_value) * np.clip(y2s - y1s, 0, clip_value)
     order = detections[:, 4].argsort()[::-1]  # highest to lowest score
 
     keep = []  # which detections are we going to keep?
@@ -247,7 +247,7 @@ def non_max_suppression(detections, threshold=0.7, clip_value=1e6, eps=1e-12):
         height_overlaps = np.clip(height_overlaps, 0, clip_value)
 
         intersections = width_overlaps * height_overlaps
-        ious = intersections / (areas[i] + areas[all_others] - intersections + 1e-12)
+        ious = intersections / (areas[i] + areas[all_others] - intersections + eps)
 
         # +1 to counteract the offset all_others = order[1:]
         order = order[np.where(ious <= threshold)[0] + 1]
