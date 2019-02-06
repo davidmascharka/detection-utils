@@ -156,6 +156,14 @@ def generate_targets(anchor_boxes, truth_boxes, labels, pos_thresh=0.3, neg_thre
     labels : numpy.ndarray, shape=(K,)
         The labels associated with each ground-truth box.
 
+    pos_thresh : Real
+        The minimum overlap threshold between a truth and anchor box for that truth box to be 'responsible' for
+        detecting the anchor.
+
+    neg_thresh : Real
+        The maximum overlap threshold between a truth and anchor box for that anchor box to be called a negative.
+        Those anchor boxes with overlap greater than this but less than `pos_thresh` will be marked as ignored.
+
     eps : Real, optional (default=1e-12)
         The epsilon to use for numerical stability.
 
