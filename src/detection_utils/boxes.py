@@ -204,13 +204,16 @@ def generate_targets(anchor_boxes, truth_boxes, labels, pos_thresh=0.3, neg_thre
     return targets_cls, targets_reg
 
 
-def non_max_suppression(detections, threshold=0.7, clip_value=1e6, eps=1e-12):
-    """ Apply non-maximum suppression to the detections provided with a given threshold.
+def non_max_suppression(boxes, scores, threshold=0.7, clip_value=1e6, eps=1e-12):
+    """ Return the indices of non-suppressed detections after applying non-maximum suppression with the given threshold.
 
     Parameters
     ----------
-    detections : np.ndarray[Real], shape=(N, 5)
-        The detection boxes to which to apply NMS, in (left, top, right, bottom, score) format.
+    boxes : np.ndarray[Real], shape=(N, 4)
+        The detection boxes to which to apply NMS, in (left, top, right, bottom) format.
+
+    scores : np.ndarray[Real], shape=(N,)
+        The detection score for each box.
 
     threshold : float ∈ [0, 1], optional (default=0.7)
         The IoU threshold to use for NMS, above which one of two box will be suppressed.
@@ -223,16 +226,13 @@ def non_max_suppression(detections, threshold=0.7, clip_value=1e6, eps=1e-12):
 
     Returns
     -------
-    numpy.ndarray[int], shape=(k,)
-        The indices of `detections` to keep, where k is the number of non-suppressed inputs and k <= N.
+    np.ndarray[int], shape=(k,)
+        The (sorted) subset of detections to keep, where k is the number of non-suppressed inputs and k <= N.
     """
-    x1s = detections[:, 0]
-    y1s = detections[:, 1]
-    x2s = detections[:, 2]
-    y2s = detections[:, 3]
+    x1s, y1s, x2s, y2s = boxes.T
 
     areas = np.clip(x2s - x1s, 0, clip_value) * np.clip(y2s - y1s, 0, clip_value)
-    order = detections[:, 4].argsort()[::-1]  # highest to lowest score
+    order = scores.argsort()[::-1]  # highest to lowest score
 
     keep = []  # which detections are we going to keep?
     while order.size > 0:
@@ -252,7 +252,7 @@ def non_max_suppression(detections, threshold=0.7, clip_value=1e6, eps=1e-12):
         # +1 to counteract the offset all_others = order[1:]
         order = order[np.where(ious <= threshold)[0] + 1]
 
-    return np.array(keep)
+    return np.array(sorted(keep), dtype=np.int32)
 
 
 def xywh_to_xyxy(boxes):
@@ -277,10 +277,12 @@ def xywh_to_xyxy(boxes):
 
 def xyxy_to_xywh(boxes):
     """ Convert boxes from xyxy to xywh.
+
     Parameters
     ----------
     boxes : numpy.ndarray, shape=(N, 4)
         Boxes, in xyxy format.
+
     Returns
     -------
     numpy.ndarray, shape=(N, 4)

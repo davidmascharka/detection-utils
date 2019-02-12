@@ -12,14 +12,18 @@ from detection_utils.boxes import box_overlaps, xywh_to_xyxy, xyxy_to_xywh, gene
 from detection_utils.boxes import compute_precision, compute_recall, non_max_suppression
 
 
-class Test_box_utils:
+class Test_box_transforms:
+    """ Ensure that the basic box manipulation routines work as intended. """
+
     def test_xyxy_to_xywh_static(self):
+        """ Ensure that transforming xyxy to xywh format works with known values. """
         xyxy_box = np.array([[-.5, -.5, .5, .5]])
         xywh_box = np.array([[-.5, -.5, 1., 1.]])
         msg = 'xyxy_to_xywh failed to produce a known-correct output'
         assert_allclose(actual=xyxy_to_xywh(xyxy_box), desired=xywh_box, err_msg=msg)
 
     def test_xywh_to_xyxy_static(self):
+        """ Ensure that transforming xywh to xyxy format works with known values. """
         xyxy_box = np.array([[-.5, -.5, .5, .5]])
         xywh_box = np.array([[-.5, -.5, 1., 1.]])
         msg = 'xywh_to_xyxy failed to produce a known-correct output'
@@ -29,7 +33,7 @@ class Test_box_utils:
                                       shape=st.tuples(st.integers(0, 20), st.just(4)),
                                       elements=st.floats(-100, 100)))
     def test_xywh_to_xyxy(self, rand_xyxy_boxes: ndarray):
-        ''' check that xyxy_to_xywh and xywh_to_xyxy are inverses '''
+        """ Ensure that xywh_to_xyxy and xyxy_to_xywh are inverses. """
         rand_xyxy_boxes[2:] = np.abs(rand_xyxy_boxes[2:])  # ensure h/w are positive
 
         msg = 'xyxy_to_xywh failed to invert xywh_to_xyxy'
@@ -38,7 +42,10 @@ class Test_box_utils:
 
 
 class Test_compute_precision:
+    """ Ensure that the compute_precision function works as intended. """
+
     def test_known_precision(self):
+        """ Ensure that compute_precision works with known box/label pairs. """
         a = np.array([[0, 0, 1, 1, 1]])
         msg = 'compute_precision failed to report precision of 1 for identical boxes'
         assert_allclose(actual=compute_precision(a, a), desired=1, err_msg=msg)
@@ -63,7 +70,10 @@ class Test_compute_precision:
 
 
 class Test_compute_recall:
+    """ Ensure that the compute_recall function works as intended. """
+
     def test_known_recall(self):
+        """ Ensure that compute_recall works with known box/label pairs. """
         a = np.array([[0, 0, 1, 1, 1]])
         msg = 'compute_recall failed to report recall of 1 for identical boxes'
         assert_allclose(actual=compute_recall(a, a), desired=1, err_msg=msg)
@@ -88,8 +98,10 @@ class Test_compute_recall:
 
 
 class Test_box_overlaps:
+    """ Ensure that the box_overlaps function works as intended. """
+
     def test_known_overlaps(self):
-        ''' Test known overlaps of boxes '''
+        """ Ensures that box_overlaps works for known box overlaps. """
         a = np.array([[-100, -100, -50, -50]])  # xyxy box
         b = np.array([[0, 0, 50, 50]])          # xyxy box
 
@@ -111,30 +123,32 @@ class Test_box_overlaps:
         assert_allclose(actual=box_overlaps(b * 2, b), desired=np.array([[0.25]]), err_msg=msg)
 
         # mixed overlap
-        msg = 'box_overlaps failed to produce the expected output for a known-overlap case'
         A = b
         B = np.vstack((a[0], b[0], b[0] / 2))
+        msg = 'box_overlaps failed to produce the expected output for a known-overlap case'
         assert_allclose(actual=box_overlaps(A, B), desired=np.array([[0, 1, 0.25]]), err_msg=msg)
         assert_allclose(actual=box_overlaps(B, A), desired=np.array([[0, 1, 0.25]]).T, err_msg=msg)
 
-    @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 3), st.just(4))),
-           truth=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 3), st.just(4))))
+    @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(4))),
+           truth=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(4))))
     def test_shapes(self, boxes: ndarray, truth: ndarray):
-        '''Ensures that edge cases that produce empty arrays are satisfied'''
+        """ Ensures that the shape returned by box_overlaps is correct, even in edge cases with no boxes. """
         N = boxes.shape[0]
         K = truth.shape[0]
-        assert box_overlaps(boxes, truth).shape == (N, K), 'box_overlaps did not produce an empty ' \
-                                                           'array of the correct shape'
+        msg = 'box_overlaps did not produce an empty array of the correct shape'
+        assert box_overlaps(boxes, truth).shape == (N, K), msg
 
 
 class Test_generate_targets:
+    """ Ensure that the generate_targets function works as intended. """
+
     @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 3), st.just(4)),
                             elements=st.floats(1, 100), unique=True),
            truth=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 3), st.just(4)),
                             elements=st.floats(1, 100), unique=True),
            data=st.data())
     def test_shapes(self, boxes: ndarray, truth: ndarray, data: st.SearchStrategy):
-        ''' Ensures that edge cases that produce empty arrays are satisfied '''
+        """ Ensure the shape returned by generate_targets is correct, even in edge cases producing empty arrays. """
         boxes = boxes.cumsum(axis=1)
         truth = truth.cumsum(axis=1)
         N = boxes.shape[0]
@@ -196,48 +210,63 @@ class Test_generate_targets:
 
 
 class Test_non_max_suppression:
-    @given(detections=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 3), st.just(5)),
-                                 elements=st.floats(1e-05, 100), unique=True),
+    @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(5)),
+                            elements=st.floats(1e-05, 100), unique=True),
            data=st.data())
-    def test_shapes(self, detections: ndarray, data: st.SearchStrategy):
-        detections[:, :4] = detections[:, :4].cumsum(axis=1)
-        N = detections.shape[0]
-        nms = non_max_suppression(detections)
+    def test_shapes(self, boxes: ndarray, data: st.SearchStrategy):
+        scores = boxes[:, 4]
+        boxes = boxes[:, :4].cumsum(axis=1)
+
+        N = scores.shape[0]
+        nms = non_max_suppression(boxes, scores)
 
         assert nms.shape[0] <= N
 
-    @given(x=hnp.arrays(dtype=float, shape=(1, 5), elements=st.floats(1e-05, 100)))
-    def test_identical(self, x: ndarray):
+    def test_empty(self):
+        x = np.empty((0, 4))
+        scores = np.empty((0,))
+        nms = non_max_suppression(x, scores)
+        msg = 'non_max_suppression failed to produce the expected output for zero detections'
+        assert nms.shape == (0,), msg
+
+    @given(x=hnp.arrays(dtype=float, shape=(1, 4), elements=st.floats(1e-05, 100)),
+           score=st.floats(0, 1),
+           rep=st.integers(2, 100))
+    def test_identical(self, x, score, rep):
         # identical detections
         x = x.cumsum(axis=1)  # ensure (l, t, r, b)
-        x = x.repeat(5).reshape(5, 5).T
+        x = x.repeat(rep).reshape(x.shape[1], rep).T
+        score = np.array([score] * rep)
         idx = np.random.randint(len(x))
-        x[idx, -1] = 1000
-        nms = non_max_suppression(x)
+        score[idx] = 1000
+
+        nms = non_max_suppression(x, score)
         msg = 'non_max_suppression failed to produce the expected output when all detections are identical'
-        assert_array_equal(nms, np.array([idx]), err_msg=msg)
+        assert_array_equal(nms, np.array([idx]), msg)
 
-        nms = non_max_suppression(x, threshold=1)
+        nms = non_max_suppression(x, score, threshold=1)
         msg = 'non_max_suppression failed to produce the expected output with threshold 1'
-        assert_array_equal(nms, np.arange(len(nms))[::-1], err_msg=msg)
+        assert_array_equal(nms, np.array(range(len(x))), msg)
 
-    @given(x=hnp.arrays(dtype=float, shape=(1, 5), elements=st.floats(1e-05, 100)))
-    def test_single_detections(self, x: ndarray):
-        nms = non_max_suppression(x)
+    @given(x=hnp.arrays(dtype=float, shape=(1, 4), elements=st.floats(1e-05, 100)),
+           score=st.floats(0, 1))
+    def test_single_detections(self, x: ndarray, score):
+        nms = non_max_suppression(x, np.array([score]))
         msg = 'non_max_suppression failed to produce the expected output for a single detection'
-        assert_array_equal(nms, np.array([0]), err_msg=msg)
+        assert_array_equal(nms, np.array([0]), msg)
 
     def test_known_results(self):
-        x = np.array([[0, 0, 1, 1, 0],
-                      [0.5, 0.5, 0.9, 0.9, 1]])
-        nms = non_max_suppression(x, threshold=0.5)
+        x = np.array([[0, 0, 1, 1],
+                      [0.5, 0.5, 0.9, 0.9]])
+        scores = np.array([0, 1])
+        nms = non_max_suppression(x, scores, threshold=0.5)
         msg = 'non_max_suppression failed to produce the expected output with threshold 0.5'
-        assert_array_equal(nms, np.array([1, 0]), err_msg=msg)
+        assert_array_equal(nms, np.array([0, 1]), msg)
 
-        nms = non_max_suppression(x, threshold=0.25)
+        nms = non_max_suppression(x, scores, threshold=0.25)
         msg = 'non_max_suppression failed to produce the expected output with threshold 0.25'
-        assert_array_equal(nms, np.array([1, 0]), err_msg=msg)
+        assert_array_equal(nms, np.array([0, 1]), msg)
 
-        nms = non_max_suppression(x, threshold=0.15)
+        nms = non_max_suppression(x, scores, threshold=0.15)
         msg = 'non_max_suppression failed to produce the expected output with threshold 0.15'
-        assert_array_equal(nms, np.array([1]), err_msg=msg)
+        assert_array_equal(nms, np.array([1]), msg)
