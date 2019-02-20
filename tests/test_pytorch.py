@@ -57,6 +57,7 @@ class Test_focal_loss:
            gamma=st.floats(0, 10),
            dtype=st.sampled_from((torch.float32, torch.float64)),
            data=st.data())
+    @settings(deadline=None)
     def test_matches_simple_implementation(self, inputs: ndarray, alpha: float, gamma: float, dtype: torch.dtype, data: st.SearchStrategy):
         """ Ensures that our numerically-stable focal loss matches a naive-implementation on
             a domain where numerical stability is not critical."""
