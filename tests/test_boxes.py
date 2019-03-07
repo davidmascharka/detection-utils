@@ -1,5 +1,7 @@
 from typing import List
 
+import pytest
+
 import numpy as np
 from numpy import ndarray
 from numpy.testing import assert_allclose, assert_array_equal
@@ -17,15 +19,15 @@ class Test_box_transforms:
 
     def test_xyxy_to_xywh_static(self):
         """ Ensure that transforming xyxy to xywh format works with known values. """
-        xyxy_box = np.array([[-.5, -.5, .5, .5]])
-        xywh_box = np.array([[-.5, -.5, 1., 1.]])
+        xyxy_box = np.array([[-0.5, -0.5, 0.5, 0.5]])
+        xywh_box = np.array([[-0.5, -0.5, 1.0, 1.0]])
         msg = 'xyxy_to_xywh failed to produce a known-correct output'
         assert_allclose(actual=xyxy_to_xywh(xyxy_box), desired=xywh_box, err_msg=msg)
 
     def test_xywh_to_xyxy_static(self):
         """ Ensure that transforming xywh to xyxy format works with known values. """
-        xyxy_box = np.array([[-.5, -.5, .5, .5]])
-        xywh_box = np.array([[-.5, -.5, 1., 1.]])
+        xyxy_box = np.array([[-0.5, -0.5, 0.5, 0.5]])
+        xywh_box = np.array([[-0.5, -0.5, 1.0, 1.0]])
         msg = 'xywh_to_xyxy failed to produce a known-correct output'
         assert_allclose(actual=xywh_to_xyxy(xywh_box), desired=xyxy_box, err_msg=msg)
 
@@ -41,93 +43,68 @@ class Test_box_transforms:
                         atol=1e-5, rtol=1e-5, err_msg=msg)
 
 
-class Test_compute_precision:
-    """ Ensure that the compute_precision function works as intended. """
-
-    def test_known_precision(self):
+class Test_precision_recall:
+    detections_a = np.array([[0, 0, 1, 1, 1]])
+    detections_b = np.array([[0, 0, 1, 1, 2]])  # identical box, but different class from a
+    detections_c = np.array([[1, 1, 2, 2, 1]])  # no overlap with a/b, different class from b
+    empty_detect = np.empty((0, 5))
+    
+    @pytest.mark.parametrize(
+        ("prediction_detections", "truth_detections", "desired_precision", "description"),
+        [(detections_a, detections_a, 1.0, "identical boxes"),
+         (detections_a, detections_b, 0.0, "identical box with different class"),
+         (detections_a, detections_c, 0.0, "non-overlapping boxes"),
+         (detections_b, detections_c, 0.0, "non-overlapping boxes with different classes"),
+         (detections_a, empty_detect, 0.0, "empty truth and non-empty predictions"),
+         (empty_detect, detections_a, 1.0, "empty predictions and non-empty truth"),
+         (empty_detect, empty_detect, 1.0, "empty predictions and empty truth")])
+    def test_known_precision(self, prediction_detections, truth_detections, desired_precision, description):
         """ Ensure that compute_precision works with known box/label pairs. """
-        a = np.array([[0, 0, 1, 1, 1]])
-        msg = 'compute_precision failed to report precision of 1 for identical boxes'
-        assert_allclose(actual=compute_precision(a, a), desired=1, err_msg=msg)
+        msg = f'compute_recall failed to report precision of {desired_precision} for {description}'
+        assert_allclose(actual=compute_precision(prediction_detections, truth_detections),
+                        desired=desired_precision, err_msg=msg)
 
-        b = np.array([[0, 0, 1, 1, 2]])
-        msg = 'compute_precision failed to report precision of 0 for identical box with different class'
-        assert_allclose(actual=compute_precision(a, b), desired=0, err_msg=msg)
-
-        b = np.array([[1, 1, 2, 2, 1]])
-        msg = 'compute_precision failed to report precision of 0 for non-overlapping boxes'
-        assert_allclose(actual=compute_precision(a, b), desired=0, err_msg=msg)
-
-        b = np.empty((0, 5))
-        msg = 'compute_precision failed to report precision of 0 for empty truth and non-empty predictions'
-        assert_allclose(actual=compute_precision(a, b), desired=0, err_msg=msg)
-
-        msg = 'compute_precision failed to repoort precision of 1 for empty predictions and non-empty truth'
-        assert_allclose(actual=compute_precision(b, a), desired=1, err_msg=msg)
-
-        msg = 'compute_precision failed to report precision of 1 for empty predictions and empty truth'
-        assert_allclose(actual=compute_precision(b, b), desired=1, err_msg=msg)
-
-
-class Test_compute_recall:
-    """ Ensure that the compute_recall function works as intended. """
-
-    def test_known_recall(self):
+    @pytest.mark.parametrize(
+        ("prediction_detections", "truth_detections", "desired_recall", "description"),
+        [(detections_a, detections_a, 1.0, "identical boxes"),
+         (detections_a, detections_b, 0.0, "identical box with different class"),
+         (detections_a, detections_c, 0.0, "non-overlapping boxes"),
+         (detections_b, detections_c, 0.0, "non-overlapping boxes with different classes"),
+         (detections_a, empty_detect, 1.0, "empty truth and non-empty predictions"),
+         (empty_detect, detections_a, 0.0, "empty predictions and non-empty truth"),
+         (empty_detect, empty_detect, 1.0, "empty predictions and empty truth")])
+    def test_known_recall(self, prediction_detections, truth_detections, desired_recall, description):
         """ Ensure that compute_recall works with known box/label pairs. """
-        a = np.array([[0, 0, 1, 1, 1]])
-        msg = 'compute_recall failed to report recall of 1 for identical boxes'
-        assert_allclose(actual=compute_recall(a, a), desired=1, err_msg=msg)
-
-        b = np.array([[0, 0, 1, 1, 2]])
-        msg = 'compute_recall failed to report recall of 0 for identical box with different class'
-        assert_allclose(actual=compute_recall(a, b), desired=0, err_msg=msg)
-
-        b = np.array([[1, 1, 2, 2, 1]])
-        msg = 'compute_recall failed to report recall of 0 for non-overlapping boxes'
-        assert_allclose(actual=compute_recall(a, b), desired=0, err_msg=msg)
-
-        b = np.empty((0, 5))
-        msg = 'compute_recall failed to report recall of 1 for empty truth and non-empty predictions'
-        assert_allclose(actual=compute_recall(a, b), desired=1, err_msg=msg)
-
-        msg = 'compute_recall failed to repoort recall of 0 for empty predictions and non-empty truth'
-        assert_allclose(actual=compute_recall(b, a), desired=0, err_msg=msg)
-
-        msg = 'compute_recall failed to report recall of 1 for empty predictions and empty truth'
-        assert_allclose(actual=compute_recall(b, b), desired=1, err_msg=msg)
+        msg = f'compute_recall failed to report recall of {desired_recall} for {description}'
+        assert_allclose(actual=compute_recall(prediction_detections, truth_detections),
+                        desired=desired_recall, err_msg=msg)
 
 
 class Test_box_overlaps:
     """ Ensure that the box_overlaps function works as intended. """
+    a = np.array([[-100, -100, -50, -50]])  # xyxy box
+    b = np.array([[0, 0, 50, 50]])          # xyxy box
+    A = b
+    B = np.vstack((a[0], b[0], b[0] / 2))
 
-    def test_known_overlaps(self):
-        """ Ensures that box_overlaps works for known box overlaps. """
-        a = np.array([[-100, -100, -50, -50]])  # xyxy box
-        b = np.array([[0, 0, 50, 50]])          # xyxy box
-
-        # no overlap
-        msg = 'box_overlaps produced the wrong output for a no-overlap case'
-        assert_allclose(actual=box_overlaps(a, b), desired=np.array([[0]]), err_msg=msg)
-        assert_allclose(actual=box_overlaps(b, a), desired=np.array([[0]]), err_msg=msg)
-
-        # exact overlap
-        msg = 'box_overlaps failed to produce the expected output for an exact-overlap case'
-        assert_allclose(actual=box_overlaps(a, a), desired=np.array([[1]]), err_msg=msg)
-        assert_allclose(actual=box_overlaps(b, b), desired=np.array([[1]]), err_msg=msg)
-
-        # quarter overlap
-        msg = 'box_overlaps failed to produce the expected output for a quarter-overlap case'
-        assert_allclose(actual=box_overlaps(b, b / 2), desired=np.array([[0.25]]), err_msg=msg)
-        assert_allclose(actual=box_overlaps(b, b * 2), desired=np.array([[0.25]]), err_msg=msg)
-        assert_allclose(actual=box_overlaps(b / 2, b), desired=np.array([[0.25]]), err_msg=msg)
-        assert_allclose(actual=box_overlaps(b * 2, b), desired=np.array([[0.25]]), err_msg=msg)
-
-        # mixed overlap
-        A = b
-        B = np.vstack((a[0], b[0], b[0] / 2))
-        msg = 'box_overlaps failed to produce the expected output for a known-overlap case'
-        assert_allclose(actual=box_overlaps(A, B), desired=np.array([[0, 1, 0.25]]), err_msg=msg)
-        assert_allclose(actual=box_overlaps(B, A), desired=np.array([[0, 1, 0.25]]).T, err_msg=msg)
+    @pytest.mark.parametrize(
+        ("predicted", "truth", "overlap"),
+        [(a, b, np.array([[0.00]])),          # no-overlap
+         (b, a, np.array([[0.00]])),          # no-overlap
+         (a, a, np.array([[1.00]])),          # exact-overlap
+         (b, b, np.array([[1.00]])),          # exact-overlap
+         (b, b / 2, np.array([[0.25]])),      # quarter-overlap
+         (b, b * 2, np.array([[0.25]])),      # quarter-overlap
+         (b / 2, b, np.array([[0.25]])),      # quarter-overlap
+         (b * 2, b, np.array([[0.25]])),      # quarter-overlap
+         (A, B, np.array([[0, 1, 0.25]])),    # mixed-overlap
+         (B, A, np.array([[0, 1, 0.25]]).T),  # mixed-overlap
+         ]
+    )
+    def test_known_overlaps(self, predicted, truth, overlap):
+        """ Ensures that correctness for hand-crafted overlapping boxes. """
+        assert_allclose(actual=box_overlaps(predicted, truth),
+                        desired=overlap)
 
     @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(4))),
            truth=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(4))))
@@ -255,18 +232,18 @@ class Test_non_max_suppression:
         msg = 'non_max_suppression failed to produce the expected output for a single detection'
         assert_array_equal(nms, np.array([0]), msg)
 
-    def test_known_results(self):
-        x = np.array([[0, 0, 1, 1],
-                      [0.5, 0.5, 0.9, 0.9]])
+    @pytest.mark.parametrize(
+        ("threshold", "desired_nms"),
+        [(0.5, np.array([0, 1])),
+         (0.25, np.array([0, 1])),
+         (0.15, np.array([1])),
+         ]
+    )
+    def test_known_results(self, threshold, desired_nms):
+        """ Ensures known-correct non-max suppression results are produced"""
+        boxes = np.array([[0, 0, 1, 1],
+                          [0.5, 0.5, 0.9, 0.9]])
         scores = np.array([0, 1])
-        nms = non_max_suppression(x, scores, threshold=0.5)
-        msg = 'non_max_suppression failed to produce the expected output with threshold 0.5'
-        assert_array_equal(nms, np.array([0, 1]), msg)
 
-        nms = non_max_suppression(x, scores, threshold=0.25)
-        msg = 'non_max_suppression failed to produce the expected output with threshold 0.25'
-        assert_array_equal(nms, np.array([0, 1]), msg)
-
-        nms = non_max_suppression(x, scores, threshold=0.15)
-        msg = 'non_max_suppression failed to produce the expected output with threshold 0.15'
-        assert_array_equal(nms, np.array([1]), msg)
+        actual_nms = non_max_suppression(boxes, scores, threshold=threshold)
+        assert_array_equal(actual_nms, desired_nms)
