@@ -31,7 +31,8 @@ def softmax_focal_loss(input, target, alpha=1, gamma=0, reduction='mean'):
     -----
     When ɑ=1 and Ɣ=0, this is equivalent to softmax cross-entropy.
     """
-    assert reduction in {'mean', 'sum', 'none'}, 'Valid reduction strategies are "mean," "sum," and "none"'
+    if reduction not in {'mean', 'sum', 'none'}:
+        raise ValueError('Valid reduction strategies are "mean," "sum," and "none"')
 
     input = F.log_softmax(input, dim=1)
     logpc = input[(range(len(target)), target)]
