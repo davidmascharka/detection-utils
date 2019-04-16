@@ -27,7 +27,7 @@ class Test_softmax_focal_loss:
     @given(inputs=hnp.arrays(dtype=float, shape=(3, 5), elements=st.floats(0.01, 10)),
            targets=hnp.arrays(dtype=int, shape=(3,), elements=st.integers(0, 2)))
     def test_default_args(self, inputs: ndarray, targets: ndarray):
-        """ Ensures default arguments have not changed """
+        """ Ensures default arguments have not changed. """
         inputs = tensor(inputs)
         targets = tensor(targets)
         assert_allclose(desired=softmax_focal_loss(inputs, targets, alpha=1.0, gamma=0.0, reduction='mean'),
@@ -36,7 +36,7 @@ class Test_softmax_focal_loss:
 
     @given(reduction=st.text(alphabet=string.ascii_letters).filter(lambda x: x not in ('sum', 'mean', 'none')))
     def test_valid_args(self, reduction: str):
-        """ Ensures that invalid arguments raise a value error """
+        """ Ensures that invalid arguments raise a value error. """
         inputs = tensor(np.random.rand(5, 5))
         targets = tensor(np.random.randint(0, 1, 5))
         with pytest.raises(ValueError):
@@ -49,7 +49,7 @@ class Test_softmax_focal_loss:
            data=st.data())
     def test_matches_crossentropy(self, inputs: ndarray, alpha: float,
                                   dtype: torch.dtype, data: st.SearchStrategy):
-        """ Ensures that focal loss w/ gamma=0 matches softmax cross-entropy (scaled by alpha)"""
+        """ Ensures that focal loss w/ gamma=0 matches softmax cross-entropy (scaled by alpha). """
         targets = data.draw(hnp.arrays(dtype=int,
                                        shape=(inputs.shape[0],),
                                        elements=st.integers(0, inputs.shape[1] - 1)),
@@ -69,8 +69,7 @@ class Test_softmax_focal_loss:
            data=st.data())
     @settings(deadline=None)
     def test_matches_simple_implementation(self, inputs: ndarray, alpha: float, gamma: float, dtype: torch.dtype, data: st.SearchStrategy):
-        """ Ensures that our numerically-stable focal loss matches a naive-implementation on
-            a domain where numerical stability is not critical."""
+        """ Ensures that focal loss matches a naive-implementation over the domain where numerical stability is not an issue. """
         targets = data.draw(hnp.arrays(dtype=int,
                                        shape=(inputs.shape[0],),
                                        elements=st.integers(0, inputs.shape[1] - 1)),
@@ -103,8 +102,7 @@ class Test_softmax_focal_loss:
 
     @given(pc=st.floats(1e-5, 1 - 1e-5), alpha=st.floats(-10, 10), gamma=st.floats(0, 10))
     def test_matches_binary_classification(self, pc: float, alpha: float, gamma: float):
-        """ Ensures that our focal loss matches the explicit binary-classification
-        formulation of focal loss included in paper"""
+        """ Ensures that focal loss matches the explicit binary-classification formulation from the paper. """
         loss = -alpha * (1 - pc)**gamma * np.log(pc)
         inputs = tensor([[np.log(pc), np.log(1 - pc)]])
         targets = tensor([0])
@@ -121,7 +119,7 @@ class Test_softmax_focal_loss:
            data=st.data())
     def test_nan_in_grad(self, inputs: ndarray, alpha: float, gamma: float, dtype: torch.dtype,
                          data: st.SearchStrategy):
-        """ Ensures, across a wide range of inputs, that the focal loss gradient is not nan"""
+        """ Ensures, across a wide range of inputs, that the focal loss gradient is not nan. """
         targets = data.draw(hnp.arrays(dtype=int,
                                        shape=(inputs.shape[0],),
                                        elements=st.integers(0, inputs.shape[1] - 1)),
