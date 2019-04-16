@@ -1,3 +1,5 @@
+import string
+
 import pytest
 
 import numpy as np
@@ -19,8 +21,8 @@ except ImportError:
     has_torch = False
 
 
-@pytest.mark.skipif(not has_torch, reason='PyTorch not available. Skipping test_focal_loss...')
-class Test_focal_loss:
+@pytest.mark.skipif(not has_torch, reason='PyTorch not available. Skipping Test_softmax_focal_loss...')
+class Test_softmax_focal_loss:
     @settings(derandomize=True, database=None)
     @given(inputs=hnp.arrays(dtype=float, shape=(3, 5), elements=st.floats(0.01, 10)),
            targets=hnp.arrays(dtype=int, shape=(3,), elements=st.integers(0, 2)))
@@ -28,9 +30,17 @@ class Test_focal_loss:
         """ Ensures default arguments have not changed """
         inputs = tensor(inputs)
         targets = tensor(targets)
-        assert_allclose(desired=softmax_focal_loss(inputs, targets, alpha=1.0, gamma=0.0),
+        assert_allclose(desired=softmax_focal_loss(inputs, targets, alpha=1.0, gamma=0.0, reduction='mean'),
                         actual=softmax_focal_loss(inputs, targets),
                         err_msg="`softmax_focal_loss default args changed")
+
+    @given(reduction=st.text(alphabet=string.ascii_letters).filter(lambda x: x not in ('sum', 'mean', 'none')))
+    def test_valid_args(self, reduction: str):
+        """ Ensures that invalid arguments raise a value error """
+        inputs = tensor(np.random.rand(5, 5))
+        targets = tensor(np.random.randint(0, 1, 5))
+        with pytest.raises(ValueError):
+            softmax_focal_loss(inputs, targets, reduction=reduction)
 
     @given(inputs=hnp.arrays(dtype=float, shape=hnp.array_shapes(min_dims=2, max_dims=2),
                              elements=st.floats(-1e3, 1e3)),
@@ -39,7 +49,7 @@ class Test_focal_loss:
            data=st.data())
     def test_matches_crossentropy(self, inputs: ndarray, alpha: float,
                                   dtype: torch.dtype, data: st.SearchStrategy):
-        """ ensure that focal loss w/ gamma=0 matches softmax cross-entropy (scaled by alpha)"""
+        """ Ensures that focal loss w/ gamma=0 matches softmax cross-entropy (scaled by alpha)"""
         targets = data.draw(hnp.arrays(dtype=int,
                                        shape=(inputs.shape[0],),
                                        elements=st.integers(0, inputs.shape[1] - 1)),
