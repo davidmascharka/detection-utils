@@ -148,7 +148,7 @@ class Test_softmax_focal_loss:
     @settings(deadline=None)
     def test_reductions(self, reduction_name, reduction_function,
                         inputs, alpha, gamma, dtype, data):
-        """ Ensure the reductions do what we expect them to. """
+        """ Ensure the reductions mean, sum, and none respectively take the mean, sum, and do not reduce. """
         targets = data.draw(hnp.arrays(dtype=int,
                                        shape=(inputs.shape[0],),
                                        elements=st.integers(0, inputs.shape[1] - 1)),

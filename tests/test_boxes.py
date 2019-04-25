@@ -15,7 +15,7 @@ from detection_utils.boxes import compute_precision, compute_recall, non_max_sup
 
 
 class Test_box_transforms:
-    """ Ensure that the basic box manipulation routines work as intended. """
+    """ Ensure that the basic box manipulation routines work correctly. """
 
     def test_xyxy_to_xywh_static(self):
         """ Ensure that transforming xyxy to xywh format works with known values. """
@@ -35,7 +35,7 @@ class Test_box_transforms:
                                       shape=st.tuples(st.integers(0, 20), st.just(4)),
                                       elements=st.floats(-100, 100)))
     def test_xywh_to_xyxy(self, rand_xyxy_boxes: ndarray):
-        """ Ensure that xywh_to_xyxy and xyxy_to_xywh are inverses. """
+        """ Ensure that xywh_to_xyxy and xyxy_to_xywh are inverses (we can round-trip). """
         rand_xyxy_boxes[2:] = np.abs(rand_xyxy_boxes[2:])  # ensure h/w are positive
 
         msg = 'xyxy_to_xywh failed to invert xywh_to_xyxy'
@@ -44,11 +44,13 @@ class Test_box_transforms:
 
 
 class Test_precision_recall:
+    """ Ensure that precision and recall calculations are correct. """
+
     detections_a = np.array([[0, 0, 1, 1, 1]])
     detections_b = np.array([[0, 0, 1, 1, 2]])  # identical box, but different class from a
     detections_c = np.array([[1, 1, 2, 2, 1]])  # no overlap with a/b, different class from b
     empty_detect = np.empty((0, 5))
-    
+
     @pytest.mark.parametrize(
         ("prediction_detections", "truth_detections", "desired_precision", "description"),
         [(detections_a, detections_a, 1.0, "identical boxes"),
@@ -81,7 +83,8 @@ class Test_precision_recall:
 
 
 class Test_box_overlaps:
-    """ Ensure that the box_overlaps function works as intended. """
+    """ Ensure that the box_overlaps function correctly computes IoU. """
+
     a = np.array([[-100, -100, -50, -50]])  # xyxy box
     b = np.array([[0, 0, 50, 50]])          # xyxy box
     A = b
@@ -117,7 +120,7 @@ class Test_box_overlaps:
 
 
 class Test_generate_targets:
-    """ Ensure that the generate_targets function works as intended. """
+    """ Ensure that the generate_targets function produces the correct target values. """
 
     @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 3), st.just(4)),
                             elements=st.floats(1, 100), unique=True),
@@ -126,18 +129,18 @@ class Test_generate_targets:
            data=st.data())
     def test_shapes(self, boxes: ndarray, truth: ndarray, data: st.SearchStrategy):
         """ Ensure the shape returned by generate_targets is correct, even in edge cases producing empty arrays. """
-        boxes = boxes.cumsum(axis=1)
-        truth = truth.cumsum(axis=1)
+        boxes = boxes.cumsum(axis=1)  # to ensure we don't hit 0-width or -height boxes
+        truth = truth.cumsum(axis=1)  # to ensure we don't hit 0-width or -height boxes
         N = boxes.shape[0]
         K = truth.shape[0]
         labels = data.draw(hnp.arrays(dtype=int, shape=(K,)))
         cls, reg = generate_targets(boxes, truth, labels, 0.5, 0.4)
-        assert cls.shape == (N,), 'generate_targets failed to produce empty an array of the correct shape'
-        assert reg.shape == (N, 4), 'generate_targets failed to produce empty an array of the correct shape'
+        assert cls.shape == (N,), 'generate_targets failed to produce classification targets of the correct shape'
+        assert reg.shape == (N, 4), 'generate_targets failed to produce regression targets of the correct shape'
 
     @given(x=hnp.arrays(dtype=float, shape=(5, 4), elements=st.floats(1, 100)))
     def test_identical_proposed_and_truth(self, x: ndarray):
-        # identical proposed and ground truth boxes
+        """ Ensure that generate_targets produces regression targets that are zero for identical proposal and truth. """
         x = x.cumsum(axis=1)  # ensure (l, t, r , b)
         labels = np.array([0] * 5)
         _, reg = generate_targets(x, x, labels, 0.5, 0.4)
@@ -146,8 +149,7 @@ class Test_generate_targets:
 
     @given(shuffle_inds=st.permutations(np.arange(3)))
     def test_known_regression_values(self, shuffle_inds: List[int]):
-        # check explicit mathematical form of regression
-        # ensure that datum-ordering doesn't matter
+        """ Ensure that generate_targets works for known values. Ensure that datum ordering does not matter. """
         prop = np.array([[-0.5, -0.5, 0.5, 0.5],      # neither axis matches truth
                          [0, -0.5, np.exp(1), 0.5],   # x matches truth
                          [-0.5, 0, 0.5, np.exp(1)]])  # y matches truth
@@ -165,13 +167,12 @@ class Test_generate_targets:
     @given(label0=st.integers(1, 10), label1=st.integers(1, 10),
            shuffle_inds=st.permutations(np.arange(4)))
     def test_label_invariance(self, label0: int, label1: int, shuffle_inds: List[int]):
-        ''' check explicit mathematical form of regression
-            ensure that datum-ordering doesn't matter '''
+        """ Ensure that datum ordering doesn't matter for generate_targets. """
         # xyxy format
-        prop = np.array([[-.5, -.5, .5, .5],    # iou = 1 (truth 0)
-                         [0., -.5, 0.49, 0.5],  # iou = 0.5  (truth 0)
-                         [0., -.5, 0.39, 0.5],  # iou = 0.39  (truth 0)
-                         [10., 10., 11, 11]])   # iou = 1 (truth 1)
+        prop = np.array([[-.5, -.5, .5, .5],    # iou = 1 (truth 0) should be marked postiive
+                         [0., -.5, 0.49, 0.5],  # iou = 0.5  (truth 0) should be marked ignore
+                         [0., -.5, 0.39, 0.5],  # iou = 0.39  (truth 0) should be marked negative
+                         [10., 10., 11, 11]])   # iou = 1 (truth 1) should be marked positive
 
         # xyxy format
         truth = np.array([[-.5, -.5, .5, .5],
@@ -179,7 +180,7 @@ class Test_generate_targets:
 
         labels = np.array([label0, label1])
 
-        out_labels = np.array([label0, -1, 0, label1])
+        out_labels = np.array([label0, -1, 0, label1])  # truth 0 / ignore / background / truth 1 from above
 
         labels, reg = generate_targets(prop[shuffle_inds], truth, labels, 0.5, 0.4)
         msg = 'generate_targets is not invariant to datum-ordering'
@@ -187,19 +188,24 @@ class Test_generate_targets:
 
 
 class Test_non_max_suppression:
+    """ Ensure that non-maximum suppression (NMS) correctly suppresses expected values. """
+
     @given(boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(5)),
                             elements=st.floats(1e-05, 100), unique=True),
            data=st.data())
     def test_shapes(self, boxes: ndarray, data: st.SearchStrategy):
+        """ Ensure that non_max_suppression produces the correct shape output, even for empty inputs. """
         scores = boxes[:, 4]
-        boxes = boxes[:, :4].cumsum(axis=1)
+        boxes = boxes[:, :4].cumsum(axis=1)  # ensures no 0-width or -height boxes
 
         N = scores.shape[0]
         nms = non_max_suppression(boxes, scores)
 
-        assert nms.shape[0] <= N
+        assert nms.shape[0] <= N  # we're suppressing, so we can never end up with more things than we started with
+        assert nms.ndim == 1
 
     def test_empty(self):
+        """ Ensure that non_max_suppression works correctly with zero detections. """
         x = np.empty((0, 4))
         scores = np.empty((0,))
         nms = non_max_suppression(x, scores)
@@ -210,8 +216,8 @@ class Test_non_max_suppression:
            score=st.floats(0, 1),
            rep=st.integers(2, 100))
     def test_identical(self, x, score, rep):
-        # identical detections
-        x = x.cumsum(axis=1)  # ensure (l, t, r, b)
+        """ Ensure that non_max_suppression works correctly for identical boxes and that ordering doesn't matter. """
+        x = x.cumsum(axis=1)
         x = x.repeat(rep).reshape(x.shape[1], rep).T
         score = np.array([score] * rep)
         idx = np.random.randint(len(x))
@@ -222,12 +228,13 @@ class Test_non_max_suppression:
         assert_array_equal(nms, np.array([idx]), msg)
 
         nms = non_max_suppression(x, score, threshold=1)
-        msg = 'non_max_suppression failed to produce the expected output with threshold 1'
+        msg = 'non_max_suppression failed to produce the expected output for identical detections with threshold 1'
         assert_array_equal(nms, np.array(range(len(x))), msg)
 
     @given(x=hnp.arrays(dtype=float, shape=(1, 4), elements=st.floats(1e-05, 100)),
            score=st.floats(0, 1))
     def test_single_detections(self, x: ndarray, score):
+        """ Ensure that a single detection is not suppressed. """
         nms = non_max_suppression(x, np.array([score]))
         msg = 'non_max_suppression failed to produce the expected output for a single detection'
         assert_array_equal(nms, np.array([0]), msg)
@@ -240,7 +247,7 @@ class Test_non_max_suppression:
          ]
     )
     def test_known_results(self, threshold, desired_nms):
-        """ Ensures known-correct non-max suppression results are produced"""
+        """ Ensures that non_max_suppression works correctly for known values. """
         boxes = np.array([[0, 0, 1, 1],
                           [0.5, 0.5, 0.9, 0.9]])
         scores = np.array([0, 1])
