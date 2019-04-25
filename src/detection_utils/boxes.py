@@ -27,6 +27,16 @@ def box_overlaps(predicted, truth, eps=1e-12):
     Notes
     -----
     The format referred to, xyxy format, indicates (left, top, right, bottom) in pixel space.
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import box_overlaps
+    >>> import numpy as np
+    >>> predicted_boxes = np.array([[0, 0, 10, 10], # left, top, right, bottom (xyxy) format
+    ...                             [3, 3,  7,  7]])
+    >>> true_boxes = np.array([[2, 3, 6, 7]])
+    >>> box_overlaps(predicted_boxes, true_boxes)
+    array([[0.16], [0.6])
     """
     N = predicted.shape[0]
     K = truth.shape[0]
@@ -70,6 +80,23 @@ def compute_precision(prediction_detections, truth_detections, threshold=0.5):
     Notes
     -----
     This function operates such that when there are zero predictions, precision is 1.
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import compute_precision
+    >>> import numpy as np
+    >>> predictions = np.array([[0, 0, 10, 10, 1],  # left, top, right, bottom, class prediction
+    ...                         [3, 3,  7,  7, 1]])
+    >>> actual = np.array([[2, 3, 6, 7, 1]])
+    >>> compute_precision(predictions, actual)
+    0.5
+
+    # Our IoUs are 0.16, 0.6
+    >>> compute_precision(predictions, actual, threshold=0.15)
+    1.0
+
+    >>> compute_precision(predictions, actual, threshold=0.75)
+    0.0
     """
     # we can short-circuit with a couple special cases to improve our efficiency
     predictions = prediction_detections[:, -1]
@@ -116,6 +143,20 @@ def compute_recall(prediction_detections, truth_detections, threshold=0.5):
     Notes
     -----
     This function operates such that when there are zero targets, recall is 1 regardless of predictions.
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import compute_recall
+    >>> import numpy as np
+    >>> predictions = np.array([[0, 0, 10, 10, 1],  # left, top, right, bottom, class prediction
+    ...                         [3, 3,  7,  7, 1]])
+    >>> actual = np.array([[2, 3, 6, 7, 1]])
+    >>> compute_recall(predictions, actual)
+    1.0
+
+    # Our highest IoU is 0.6 so let's set our threshold above that
+    >>> compute_recall(predictions, actual, threshold=0.75)
+    0.0
     """
     predictions = prediction_detections[:, -1]
     truths = truth_detections[:, -1]
@@ -173,6 +214,21 @@ def generate_targets(anchor_boxes, truth_boxes, labels, pos_thresh=0.3, neg_thre
         The classification and bounding box regression targets for each anchor box. Regressions are of format
         (x-center, y-center, width, height). Classification targets of 0 indicate background, while targets of -1
         indicate that this prediction should be ignored as a difficult case.
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import generate_targets
+    >>> import numpy as np
+    >>> anchors = np.array([[-0.5,   -0.5,   0.5,   0.5],
+    ...                     [ 0.0,   -0.5,   1.0,   1.5],
+    ...                     [ 0.5,    0.0,   1.5,   1.0]])
+    >>> targets = np.array([[0, 0, 1, 1]])
+    >>> labels = np.array([1])
+    >>> generate_targets(anchors, targets, labels)
+    (array([0, 1]),
+     array([[ 5.000000e-01,  5.000000e-01, -1.110223e-16, -1.110223e-16],
+        [ 0.000000e+00,  0.000000e+00, -1.110223e-16, -6.931472e-01],
+        [-5.000000e-01,  0.000000e+00, -1.110223e-16, -1.110223e-16]]))
     """
     if truth_boxes.size == 0:
         targets_reg = np.zeros_like(anchor_boxes, dtype=np.float32)
@@ -228,6 +284,20 @@ def non_max_suppression(boxes, scores, threshold=0.7, clip_value=1e6, eps=1e-12)
     -------
     np.ndarray[int], shape=(k,)
         The (sorted) subset of detections to keep, where k is the number of non-suppressed inputs and k <= N.
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import non_max_suppression
+    >>> import numpy as np
+    >>> boxes = np.array([[  0,   0,   1,   1],
+    ...                   [0.5, 0.5, 0.9, 0.9]])
+    >>> scores = np.array([0, 1])
+    >>> non_max_suppression(boxes, scores)
+    array([0, 1])
+
+    # our default threshold is 0.7 and our IoU between these is 0.16; let's try a lower threshold
+    >>> non_max_suppression(boxes, scores, threshold=0.15)
+    array([1])
     """
     x1s, y1s, x2s, y2s = boxes.T
 
@@ -267,6 +337,16 @@ def xywh_to_xyxy(boxes):
     -------
     numpy.ndarray, shape=(N, 4)
         Boxes in xyxy format
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import xywh_to_xyxy
+    >>> import numpy as np
+    >>> boxes = np.array([[0, 0, 2, 3],  # left, top, width, height
+    ...                   [5, 6, 7, 8]])
+    >>> xywh_to_xyxy(boxes)
+    array([[0, 0,  2, 3],
+           [5, 6, 12, 14]])
     """
     temp = np.empty_like(boxes)
     if temp.size > 0:
@@ -287,6 +367,16 @@ def xyxy_to_xywh(boxes):
     -------
     numpy.ndarray, shape=(N, 4)
         Boxes in xywh format
+
+    Examples
+    --------
+    >>> from detection_utils.boxes import xyxy_to_xywh
+    >>> import numpy as np
+    >>> boxes = np.array([[0, 0,  2,  3],  # left, top, right, bottom
+    ...                   [5, 6, 12, 14]])
+    >>> xyxy_to_xywh(boxes)
+    array([[0, 0,  2, 3],
+           [5, 6, 7, 8]])
     """
     temp = np.empty_like(boxes)
     if temp.size > 0:
