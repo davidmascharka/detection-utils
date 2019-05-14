@@ -4,12 +4,12 @@ Common functionality for object detection
 This repository hosts functions that are commonly used across object detection projects. The
 functionality here includes:
 
-- [Box overlap computation](src/detection_utils/boxes.py#L6) (IoU)
-- [Precision](src/detection_utils/metrics.py#L6) and [recall](src/detection_utils/metrics.py#L68) calculations
-- [Computing targets](src/detection_utils/boxes.py#L60) for training a detector given a set of ground-truth objects
-- [Non-maximum suppression](src/detection_utils/boxes.py#L141)
-- [Coordinate transform utilities](src/detection_utils/boxes.py#L206)
-- [Focal loss in PyTorch](src/detection_utils/pytorch.py#L5)
+- [Box overlap computation](src/detection_utils/boxes.py#L29) (IoU)
+- [Precision](src/detection_utils/metrics.py#L27) and [recall](src/detection_utils/metrics.py#L93) calculations
+- [Computing targets](src/detection_utils/boxes.py#L82) for training a detector given a set of ground-truth objects
+- [Non-maximum suppression](src/detection_utils/boxes.py#L170)
+- [Coordinate transform utilities](src/detection_utils/boxes.py#L241)
+- [Focal loss in PyTorch](src/detection_utils/pytorch.py#L26)
 
 All the functions here are
 [well-tested](tests) to ensure proper
