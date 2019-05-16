@@ -150,7 +150,7 @@ class Test_generate_targets:
     def test_label_invariance(self, label0: int, label1: int, shuffle_inds: List[int]):
         """ Ensure that datum ordering doesn't matter for generate_targets. """
         # xyxy format
-        prop = np.array([[-.5, -.5, .5, .5],    # iou = 1 (truth 0) should be marked postiive
+        prop = np.array([[-.5, -.5, .5, .5],    # iou = 1 (truth 0) should be marked poitiive
                          [0., -.5, 0.49, 0.5],  # iou = 0.5  (truth 0) should be marked ignore
                          [0., -.5, 0.39, 0.5],  # iou = 0.39  (truth 0) should be marked negative
                          [10., 10., 11, 11]])   # iou = 1 (truth 1) should be marked positive
