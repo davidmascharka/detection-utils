@@ -19,11 +19,16 @@
 # work.
 
 import numpy as np
+from numpy import ndarray
 
 from .boxes import box_overlaps
 
 
-def compute_precision(prediction_detections, truth_detections, threshold=0.5):
+def compute_precision(
+        prediction_detections: ndarray,
+        truth_detections: ndarray,
+        threshold: float = 0.5,
+) -> float:
     """ Compute the average precision of predictions given targets.
 
     Precision is defined as the number of true positive predictions divided by the number of total positive predictions.
@@ -85,7 +90,11 @@ def compute_precision(prediction_detections, truth_detections, threshold=0.5):
     return true_positives / predicted_positives
 
 
-def compute_recall(prediction_detections, truth_detections, threshold=0.5):
+def compute_recall(
+        prediction_detections: ndarray,
+        truth_detections: ndarray,
+        threshold: float = 0.5,
+) -> float:
     """ Compute the average recall of predictions given targets.
 
     Recall is defined as the number true positive predictions divided by the number of ground-truth targets.

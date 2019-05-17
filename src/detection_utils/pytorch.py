@@ -19,10 +19,17 @@
 # work.
 
 import torch
+from torch import Tensor
 import torch.nn.functional as F
 
 
-def softmax_focal_loss(input, target, alpha=1, gamma=0, reduction='mean'):
+def softmax_focal_loss(
+        inputs: Tensor,
+        targets: Tensor,
+        alpha: float = 1,
+        gamma: float = 0,
+        reduction: str = 'mean',
+) -> Tensor:
     """ Returns the focal loss as described in https://arxiv.org/abs/1708.02002 which is given by -ɑ(1-p)ˠlog(p).
 
     Parameters
@@ -54,8 +61,8 @@ def softmax_focal_loss(input, target, alpha=1, gamma=0, reduction='mean'):
     if reduction not in {'mean', 'sum', 'none'}:
         raise ValueError('Valid reduction strategies are "mean," "sum," and "none"')
 
-    input = F.log_softmax(input, dim=1)
-    logpc = input[(range(len(target)), target)]
+    inputs = F.log_softmax(inputs, dim=1)
+    logpc = inputs[(range(len(targets)), targets)]
     one_m_pc = (-1 * torch.expm1(logpc)).clamp(min=1e-14, max=1.0)
     loss = -alpha * one_m_pc**gamma * logpc
     return loss if reduction == 'none' else loss.mean() if reduction == 'mean' else loss.sum()

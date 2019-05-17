@@ -18,12 +18,15 @@
 # as specifically authorized by the U.S. Government may violate any copyrights that exist in this
 # work.
 
+from typing import Tuple
+
 import numba
 import numpy as np
+from numpy import ndarray
 
 
 @numba.njit
-def box_overlaps(predicted, truth, eps=1e-12):
+def box_overlaps(predicted: ndarray, truth: ndarray, eps: float = 1e-12) -> ndarray:
     """ Return the overlap between two lists of boxes.
 
     Calculates the intersection over union between a list of predicted boxes and a list of ground-truth boxes.
@@ -76,7 +79,14 @@ def box_overlaps(predicted, truth, eps=1e-12):
     return ious
 
 
-def generate_targets(anchor_boxes, truth_boxes, labels, pos_thresh=0.3, neg_thresh=0.2, eps=1e-12):
+def generate_targets(
+        anchor_boxes: ndarray,
+        truth_boxes: ndarray,
+        labels: ndarray,
+        pos_thresh: float = 0.3,
+        neg_thresh: float = 0.2,
+        eps: float = 1e-12,
+) -> Tuple[ndarray, ndarray]:
     """ Generate classification and regression targets from ground-truth boxes.
 
     Each regression target is matched to its highest-overlapping ground-truth box. Those targets with less than a
@@ -157,7 +167,13 @@ def generate_targets(anchor_boxes, truth_boxes, labels, pos_thresh=0.3, neg_thre
     return targets_cls, targets_reg
 
 
-def non_max_suppression(boxes, scores, threshold=0.7, clip_value=1e6, eps=1e-12):
+def non_max_suppression(
+        boxes: ndarray,
+        scores: ndarray,
+        threshold: float = 0.7,
+        clip_value: float = 1e6,
+        eps: float = 1e-12,
+) -> ndarray:
     """ Return the indices of non-suppressed detections after applying non-maximum suppression with the given threshold.
 
     Parameters
@@ -222,7 +238,7 @@ def non_max_suppression(boxes, scores, threshold=0.7, clip_value=1e6, eps=1e-12)
     return np.array(sorted(keep), dtype=np.int32)
 
 
-def xywh_to_xyxy(boxes):
+def xywh_to_xyxy(boxes: ndarray) -> ndarray:
     """ Convert boxes from xywh to xyxy.
 
     Parameters
@@ -252,7 +268,7 @@ def xywh_to_xyxy(boxes):
     return temp
 
 
-def xyxy_to_xywh(boxes):
+def xyxy_to_xywh(boxes: ndarray) -> ndarray:
     """ Convert boxes from xyxy to xywh.
 
     Parameters
