@@ -7,9 +7,9 @@ LICENSE = 'MIT'
 AUTHOR = 'David Mascharka, Ryan Soklaski, Arjun Majumdar'
 AUTHOR_EMAIL = 'davidmascharka@gmail.com, rsoklaski@gmail.com, arjun.majum@gmail.com'
 URL = 'https://github.com/fill/this/in/later/detection-utils'
-INSTALL_REQUIRES = ['numpy >= 1.13', 'torch >= 0.4', 'numba >= 0.38']
+INSTALL_REQUIRES = ['numpy >= 1.13', 'numba >= 0.38']
+EXTRAS_REQUIRE = {'pytorch': ['pytorch >= 0.4']}
 TESTS_REQUIRE = ['pytest >= 3.8', 'hypothesis >= 4.6']
-
 LONG_DESCRIPTION = """
 detection-utils provides utilities that are common across many object detection projects.
 This includes things like:
@@ -34,7 +34,8 @@ if __name__ == '__main__':
           license=LICENSE,
           author=AUTHOR,
           author_email=AUTHOR_EMAIL,
-          instsall_requires=INSTALL_REQUIRES,
+          install_requires=INSTALL_REQUIRES,
+          extras_require=EXTRAS_REQUIRE,
           tests_require=TESTS_REQUIRE,
           url=URL,
           version=versioneer.get_version(),
