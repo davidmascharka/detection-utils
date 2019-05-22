@@ -1,3 +1,0 @@
-numpy >= 1.13
-torch >= 0.4
-numba >= 0.40

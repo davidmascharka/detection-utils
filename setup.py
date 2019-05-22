@@ -8,7 +8,7 @@ AUTHOR = 'David Mascharka, Ryan Soklaski, Arjun Majumdar'
 AUTHOR_EMAIL = 'davidmascharka@gmail.com, rsoklaski@gmail.com, arjun.majum@gmail.com'
 URL = 'https://github.com/fill/this/in/later/detection-utils'
 INSTALL_REQUIRES = ['numpy >= 1.13', 'numba >= 0.38']
-EXTRAS_REQUIRE = {'pytorch': ['pytorch >= 0.4']}
+EXTRAS_REQUIRE = {'pytorch': ['torch >= 0.4']}
 TESTS_REQUIRE = ['pytest >= 3.8', 'hypothesis >= 4.6']
 LONG_DESCRIPTION = """
 detection-utils provides utilities that are common across many object detection projects.
