@@ -1,4 +1,6 @@
 # detection-utils
+> Written by [David Mascharka](https://github.com/davidmascharka), [Ryan Soklaski](https://github.com/rsokl), and [Arjun Majumdar](https://github.com/arjunmajum)
+
 Common functionality for object detection
 
 This repository hosts functions that are commonly used across object detection projects. The
@@ -40,9 +42,16 @@ $ pip install detection-utils
 Clone this repository and install:
 
 ``` shell
-$ git clone https://github.com/davidmascharka/test.git && cd detection-utils
+$ git clone https://github.com/davidmascharka/detection-utils.git && cd detection-utils
 $ pip install .
 ```
+
+#### Verifying Installation
+
+To verify installation, ensure that [pytest](https://docs.pytest.org/en/latest/) and
+[hypothesis](https://hypothesis.readthedocs.io/en/latest/) are installed, then run
+`pytest` from the `detection-utils` base directory.
+
 ## Contributing
 If you're interested in contributing to this library, a good place to start is by browsing for [open
 issues](https://github.com/davidmascharka/detection-utils/issues) to see if there are

@@ -6,7 +6,19 @@ DESCRIPTION = 'Common functionality for object detection'
 LICENSE = 'MIT'
 AUTHOR = 'David Mascharka, Ryan Soklaski, Arjun Majumdar'
 AUTHOR_EMAIL = 'davidmascharka@gmail.com, rsoklaski@gmail.com, arjun.majum@gmail.com'
-URL = 'https://github.com/fill/this/in/later/detection-utils'
+URL = 'https://github.com/davidmascharka/detection-utils'
+CLASSIFIERS = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Topic :: Scientific/Engineering",
+]
 INSTALL_REQUIRES = ['numpy >= 1.13', 'numba >= 0.38']
 EXTRAS_REQUIRE = {'pytorch': ['torch >= 0.4']}
 TESTS_REQUIRE = ['pytest >= 3.8', 'hypothesis >= 4.6']
@@ -31,6 +43,7 @@ if __name__ == '__main__':
     setup(name=DISTNAME,
           description=DESCRIPTION,
           long_description=LONG_DESCRIPTION,
+          long_description_content_type='text/markdown',
           license=LICENSE,
           author=AUTHOR,
           author_email=AUTHOR_EMAIL,
