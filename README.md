@@ -1,6 +1,8 @@
 # detection-utils
 > Written by [David Mascharka](https://github.com/davidmascharka), [Ryan Soklaski](https://github.com/rsokl), and [Arjun Majumdar](https://github.com/arjunmajum)
 
+![build status](https://img.shields.io/travis/davidmascharka/detection-utils.svg)
+
 Common functionality for object detection
 
 This repository hosts functions that are commonly used across object detection projects. The
