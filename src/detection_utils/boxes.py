@@ -67,24 +67,30 @@ def box_overlaps(predicted: ndarray, truth: ndarray, eps: float = 1e-12) -> ndar
     for k in range(K):
         truth_area = (truth[k, 2] - truth[k, 0]) * (truth[k, 3] - truth[k, 1])
         for n in range(N):
-            width_overlap = min(predicted[n, 2], truth[k, 2]) - max(predicted[n, 0], truth[k, 0])
+            width_overlap = min(predicted[n, 2], truth[k, 2]) - max(
+                predicted[n, 0], truth[k, 0]
+            )
             if width_overlap > 0:
-                height_overlap = min(predicted[n, 3], truth[k, 3]) - max(predicted[n, 1], truth[k, 1])
+                height_overlap = min(predicted[n, 3], truth[k, 3]) - max(
+                    predicted[n, 1], truth[k, 1]
+                )
                 if height_overlap > 0:
                     overlap_area = width_overlap * height_overlap
-                    box_area = (predicted[n, 2] - predicted[n, 0]) * (predicted[n, 3] - predicted[n, 1])
+                    box_area = (predicted[n, 2] - predicted[n, 0]) * (
+                        predicted[n, 3] - predicted[n, 1]
+                    )
                     union = box_area + truth_area - overlap_area
                     ious[n, k] = overlap_area / (union + eps)
     return ious
 
 
 def generate_targets(
-        anchor_boxes: ndarray,
-        truth_boxes: ndarray,
-        labels: ndarray,
-        pos_thresh: float = 0.3,
-        neg_thresh: float = 0.2,
-        eps: float = 1e-12,
+    anchor_boxes: ndarray,
+    truth_boxes: ndarray,
+    labels: ndarray,
+    pos_thresh: float = 0.3,
+    neg_thresh: float = 0.2,
+    eps: float = 1e-12,
 ) -> Tuple[ndarray, ndarray]:
     """ Generate classification and regression targets from ground-truth boxes.
 
@@ -142,8 +148,8 @@ def generate_targets(
         return targets_cls, targets_reg
 
     ious = box_overlaps(anchor_boxes, truth_boxes)  # NxK
-    max_ious = ious.max(axis=1)                     # N IoUs
-    max_idxs = ious.argmax(axis=1)                  # N indices
+    max_ious = ious.max(axis=1)  # N IoUs
+    max_idxs = ious.argmax(axis=1)  # N indices
 
     target_boxes = truth_boxes[max_idxs]
 
@@ -167,11 +173,11 @@ def generate_targets(
 
 
 def non_max_suppression(
-        boxes: ndarray,
-        scores: ndarray,
-        threshold: float = 0.7,
-        clip_value: float = 1e6,
-        eps: float = 1e-12,
+    boxes: ndarray,
+    scores: ndarray,
+    threshold: float = 0.7,
+    clip_value: float = 1e6,
+    eps: float = 1e-12,
 ) -> ndarray:
     """ Return the indices of non-suppressed detections after applying non-maximum suppression with the given threshold.
 
@@ -222,10 +228,14 @@ def non_max_suppression(
         keep.append(i)
         all_others = order[1:]  # everything except the current box
 
-        width_overlaps = np.maximum(0, np.minimum(x2s[i], x2s[all_others]) - np.maximum(x1s[i], x1s[all_others]))
+        width_overlaps = np.maximum(
+            0, np.minimum(x2s[i], x2s[all_others]) - np.maximum(x1s[i], x1s[all_others])
+        )
         width_overlaps = np.clip(width_overlaps, 0, clip_value)
 
-        height_overlaps = np.maximum(0, np.minimum(y2s[i], y2s[all_others]) - np.maximum(y1s[i], y1s[all_others]))
+        height_overlaps = np.maximum(
+            0, np.minimum(y2s[i], y2s[all_others]) - np.maximum(y1s[i], y1s[all_others])
+        )
         height_overlaps = np.clip(height_overlaps, 0, clip_value)
 
         intersections = width_overlaps * height_overlaps

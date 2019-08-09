@@ -24,9 +24,7 @@ from .boxes import box_overlaps
 
 
 def compute_precision(
-        prediction_detections: ndarray,
-        truth_detections: ndarray,
-        threshold: float = 0.5,
+    prediction_detections: ndarray, truth_detections: ndarray, threshold: float = 0.5
 ) -> float:
     """ Compute the average precision of predictions given targets.
 
@@ -76,23 +74,25 @@ def compute_precision(
         return 1  # (0 TP) / (0 TP + 0 FP) is counted as 100% correct
 
     if truths.sum() == 0:
-        return 0  # we've already handled the case where we found 0/0 relevant objects above
+        return (
+            0
+        )  # we've already handled the case where we found 0/0 relevant objects above
 
     ious = box_overlaps(prediction_detections[:, :4], truth_detections[:, :4])
     max_ious = ious.max(axis=1)
     max_idxs = ious.argmax(axis=1)
 
     target_labels = truths[max_idxs]
-    true_positives = (predictions == target_labels)[np.logical_and(max_ious >= threshold, target_labels > 0)].sum()
+    true_positives = (predictions == target_labels)[
+        np.logical_and(max_ious >= threshold, target_labels > 0)
+    ].sum()
     predicted_positives = (predictions > 0).sum()
 
     return true_positives / predicted_positives
 
 
 def compute_recall(
-        prediction_detections: ndarray,
-        truth_detections: ndarray,
-        threshold: float = 0.5,
+    prediction_detections: ndarray, truth_detections: ndarray, threshold: float = 0.5
 ) -> float:
     """ Compute the average recall of predictions given targets.
 
@@ -135,17 +135,23 @@ def compute_recall(
     truths = truth_detections[:, -1]
 
     if truths.sum() == 0:
-        return 1  # if there are no targets, then by definition we've found all the targets
+        return (
+            1
+        )  # if there are no targets, then by definition we've found all the targets
 
     if predictions.sum() == 0:
-        return 0  # if there are targets and we predict there are none, we can short circuit
+        return (
+            0
+        )  # if there are targets and we predict there are none, we can short circuit
 
     ious = box_overlaps(prediction_detections[:, :4], truth_detections[:, :4])
     max_ious = ious.max(axis=1)
     max_idxs = ious.argmax(axis=1)
 
     target_labels = truths[max_idxs]
-    true_positives = (predictions == target_labels)[np.logical_and(max_ious >= threshold, target_labels > 0)].sum()
+    true_positives = (predictions == target_labels)[
+        np.logical_and(max_ious >= threshold, target_labels > 0)
+    ].sum()
     false_negatives = (predictions != target_labels)[max_ious >= threshold].sum()
     false_negatives += (ious.max(axis=0) < threshold).sum()
 
