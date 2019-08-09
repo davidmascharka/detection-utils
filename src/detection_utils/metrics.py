@@ -59,10 +59,10 @@ def compute_precision(
     >>> compute_precision(predictions, actual)
     0.5
 
-    # Our IoUs are 0.16, 0.6
+    Our IoUs are 0.16, 0.6
+
     >>> compute_precision(predictions, actual, threshold=0.15)
     1.0
-
     >>> compute_precision(predictions, actual, threshold=0.75)
     0.0
     """
