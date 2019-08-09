@@ -48,7 +48,7 @@ class Test_softmax_focal_loss:
     def test_default_args(self, inputs: ndarray, targets: ndarray):
         """ Ensures default arguments have not changed. """
         inputs = tensor(inputs)
-        targets = tensor(targets)
+        targets = tensor(targets, dtype=torch.long)
         assert_allclose(desired=softmax_focal_loss(inputs, targets, alpha=1.0, gamma=0.0, reduction='mean'),
                         actual=softmax_focal_loss(inputs, targets),
                         err_msg="`softmax_focal_loss default args changed")
@@ -75,7 +75,7 @@ class Test_softmax_focal_loss:
                             label="targets")
 
         inputs = tensor(inputs, dtype=dtype)
-        targets = tensor(targets)
+        targets = tensor(targets, dtype=torch.long)
         assert_allclose(desired=alpha * F.cross_entropy(inputs, targets),
                         actual=softmax_focal_loss(inputs, targets, alpha=alpha, gamma=0.),
                         atol=1e-6, rtol=1e-6, err_msg="Focal loss with gamma=0 fails to match cross-entropy loss.")
@@ -145,7 +145,7 @@ class Test_softmax_focal_loss:
                             label="targets")
 
         inputs = tensor(inputs, dtype=dtype, requires_grad=True)
-        targets = tensor(targets)
+        targets = tensor(targets, dtype=torch.long)
         loss = softmax_focal_loss(inputs, targets, alpha=alpha, gamma=gamma)
 
         loss.backward()
