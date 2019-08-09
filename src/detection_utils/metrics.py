@@ -127,7 +127,8 @@ def compute_recall(
     >>> compute_recall(predictions, actual)
     1.0
 
-    # Our highest IoU is 0.6 so let's set our threshold above that
+    Our highest IoU is 0.6 so let's set our threshold above that
+
     >>> compute_recall(predictions, actual, threshold=0.75)
     0.0
     """
