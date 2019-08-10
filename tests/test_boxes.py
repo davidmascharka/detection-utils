@@ -292,7 +292,10 @@ class Test_non_max_suppression:
     )
     def test_known_results(self, threshold, desired_nms):
         """ Ensures that non_max_suppression works correctly for known values. """
-        boxes = np.array([[0, 0, 1, 1], [0.5, 0.5, 0.9, 0.9]])
+        boxes = np.array([
+            [0, 0, 1, 1],
+            [0.5, 0.5, 0.9, 0.9]
+        ])
         scores = np.array([0, 1])
 
         actual_nms = non_max_suppression(boxes, scores, threshold=threshold)
