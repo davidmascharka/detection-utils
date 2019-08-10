@@ -86,17 +86,18 @@ class Test_box_overlaps:
 
     @pytest.mark.parametrize(
         ("predicted", "truth", "overlap"),
-        [(a, b, np.array([[0.00]])),          # no-overlap
-         (b, a, np.array([[0.00]])),          # no-overlap
-         (a, a, np.array([[1.00]])),          # exact-overlap
-         (b, b, np.array([[1.00]])),          # exact-overlap
-         (b, b / 2, np.array([[0.25]])),      # quarter-overlap
-         (b, b * 2, np.array([[0.25]])),      # quarter-overlap
-         (b / 2, b, np.array([[0.25]])),      # quarter-overlap
-         (b * 2, b, np.array([[0.25]])),      # quarter-overlap
-         (A, B, np.array([[0, 1, 0.25]])),    # mixed-overlap
-         (B, A, np.array([[0, 1, 0.25]]).T),  # mixed-overlap
-         ]
+        [
+            (a, b, np.array([[0.00]])),  # no-overlap
+            (b, a, np.array([[0.00]])),  # no-overlap
+            (a, a, np.array([[1.00]])),  # exact-overlap
+            (b, b, np.array([[1.00]])),  # exact-overlap
+            (b, b / 2, np.array([[0.25]])),  # quarter-overlap
+            (b, b * 2, np.array([[0.25]])),  # quarter-overlap
+            (b / 2, b, np.array([[0.25]])),  # quarter-overlap
+            (b * 2, b, np.array([[0.25]])),  # quarter-overlap
+            (A, B, np.array([[0, 1, 0.25]])),  # mixed-overlap
+            (B, A, np.array([[0, 1, 0.25]]).T),  # mixed-overlap
+        ],
     )
     def test_known_overlaps(self, predicted, truth, overlap):
         """ Ensures that correctness for hand-crafted overlapping boxes. """
@@ -140,13 +141,12 @@ class Test_generate_targets:
         K = truth.shape[0]
         labels = data.draw(hnp.arrays(dtype=int, shape=(K,)))
         cls, reg = generate_targets(boxes, truth, labels, 0.5, 0.4)
-        assert cls.shape == (
-            N,
-        ), "generate_targets failed to produce classification targets of the correct shape"
-        assert reg.shape == (
-            N,
-            4,
-        ), "generate_targets failed to produce regression targets of the correct shape"
+
+        msg = "generate_targets failed to produce classification targets of the correct shape"
+        assert cls.shape == (N,), msg
+
+        msg = "generate_targets failed to produce regression targets of the correct shape"
+        assert reg.shape == (N, 4), msg
 
     @given(x=hnp.arrays(dtype=float, shape=(5, 4), elements=st.floats(1, 100)))
     def test_identical_proposed_and_truth(self, x: ndarray):
@@ -164,11 +164,11 @@ class Test_generate_targets:
         """ Ensure that generate_targets works for known values. Ensure that datum ordering does not matter. """
         prop = np.array(
             [
-                [-0.5, -0.5, 0.5, 0.5],  # neither axis matches truth
+                [-0.5, -0.5, 0.5, 0.5],     # neither axis matches truth
                 [0, -0.5, np.exp(1), 0.5],  # x matches truth
-                [-0.5, 0, 0.5, np.exp(1)],
+                [-0.5, 0, 0.5, np.exp(1)],  # y matches truth
             ]
-        )  # y matches truth
+        )
         truth = np.array([[0, 0, np.exp(1), np.exp(1)]])
         labels = np.array([1.0])
 
@@ -194,13 +194,20 @@ class Test_generate_targets:
     def test_label_invariance(self, label0: int, label1: int, shuffle_inds: List[int]):
         """ Ensure that datum ordering doesn't matter for generate_targets. """
         # xyxy format
-        prop = np.array([[-.5, -.5, .5, .5],    # iou = 1 (truth 0) should be marked poitiive
-                         [0., -.5, 0.49, 0.5],  # iou = 0.5  (truth 0) should be marked ignore
-                         [0., -.5, 0.39, 0.5],  # iou = 0.39  (truth 0) should be marked negative
-                         [10., 10., 11, 11]])   # iou = 1 (truth 1) should be marked positive
+        prop = np.array(
+            [
+                [-0.5, -0.5, 0.5, 0.5],  # iou = 1 (truth 0) should be marked poitiive
+                [0.0, -0.5, 0.49, 0.5],  # iou = 0.5  (truth 0) should be marked ignore
+                [0.0, -0.5, 0.39, 0.5],  # iou = 0.39  (truth 0) should be marked negative
+                [10.0, 10.0, 11, 11],
+            ]
+        )  # iou = 1 (truth 1) should be marked positive
 
         # xyxy format
-        truth = np.array([[-0.5, -0.5, 0.5, 0.5], [10.0, 10.0, 11, 11]])
+        truth = np.array([
+            [-0.5, -0.5, 0.5, 0.5],
+            [10.0, 10.0, 11, 11]
+        ])
 
         labels = np.array([label0, label1])
 
@@ -279,7 +286,9 @@ class Test_non_max_suppression:
 
     @pytest.mark.parametrize(
         ("threshold", "desired_nms"),
-        [(0.5, np.array([0, 1])), (0.25, np.array([0, 1])), (0.15, np.array([1]))],
+        [(0.5, np.array([0, 1])),
+         (0.25, np.array([0, 1])),
+         (0.15, np.array([1]))],
     )
     def test_known_results(self, threshold, desired_nms):
         """ Ensures that non_max_suppression works correctly for known values. """
