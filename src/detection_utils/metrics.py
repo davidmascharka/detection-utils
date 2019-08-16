@@ -30,7 +30,8 @@ def compute_precision(
 ) -> float:
     """ Compute the average precision of predictions given targets.
 
-    Precision is defined as the number of true positive predictions divided by the number of total positive predictions.
+    Precision is defined as the number of true positive predictions divided by the number
+    of total positive predictions.
 
     Parameters
     ----------
@@ -56,15 +57,14 @@ def compute_precision(
     --------
     >>> from detection_utils.metrics import compute_precision
     >>> import numpy as np
-    >>> predictions = np.array([[0, 0, 10, 10, 1], [3, 3, 7, 7, 1]])  # left, top, right, bottom, class prediction
+    >>> predictions = np.array([[0, 0, 10, 10, 1], [3, 3, 7, 7, 1]])  # left, top, right, bottom, class
     >>> actual = np.array([[2, 3, 6, 7, 1]])
     >>> compute_precision(predictions, actual)
     0.5
 
-    # Our IoUs are 0.16, 0.6
+    Our IoUs are 0.16, 0.6
     >>> compute_precision(predictions, actual, threshold=0.15)
     1.0
-
     >>> compute_precision(predictions, actual, threshold=0.75)
     0.0
     """
@@ -83,10 +83,11 @@ def compute_precision(
     max_idxs = ious.argmax(axis=1)
 
     target_labels = truths[max_idxs]
-    true_positives = (predictions == target_labels)[np.logical_and(max_ious >= threshold, target_labels > 0)].sum()
-    predicted_positives = (predictions > 0).sum()
+    true_positive_idxs = np.logical_and(max_ious >= threshold, target_labels > 0)
+    num_true_positives = (predictions == target_labels)[true_positive_idxs].sum()
+    num_predicted_positives = (predictions > 0).sum()
 
-    return true_positives / predicted_positives
+    return num_true_positives / num_predicted_positives
 
 
 def compute_recall(
@@ -122,12 +123,12 @@ def compute_recall(
     --------
     >>> from detection_utils.metrics import compute_recall
     >>> import numpy as np
-    >>> predictions = np.array([[0, 0, 10, 10, 1], [3, 3, 7, 7, 1]])  # left, top, right, bottom, class prediction
+    >>> predictions = np.array([[0, 0, 10, 10, 1], [3, 3, 7, 7, 1]])  # left, top, right, bottom, class
     >>> actual = np.array([[2, 3, 6, 7, 1]])
     >>> compute_recall(predictions, actual)
     1.0
 
-    # Our highest IoU is 0.6 so let's set our threshold above that
+    Our highest IoU is 0.6 so let's set our threshold above that
     >>> compute_recall(predictions, actual, threshold=0.75)
     0.0
     """
@@ -145,8 +146,9 @@ def compute_recall(
     max_idxs = ious.argmax(axis=1)
 
     target_labels = truths[max_idxs]
-    true_positives = (predictions == target_labels)[np.logical_and(max_ious >= threshold, target_labels > 0)].sum()
-    false_negatives = (predictions != target_labels)[max_ious >= threshold].sum()
-    false_negatives += (ious.max(axis=0) < threshold).sum()
+    true_positive_idxs = np.logical_and(max_ious >= threshold, target_labels > 0)
+    num_true_positives = (predictions == target_labels)[true_positive_idxs].sum()
+    num_false_negatives = (predictions != target_labels)[max_ious >= threshold].sum()
+    num_false_negatives += (ious.max(axis=0) < threshold).sum()
 
-    return true_positives / (true_positives + false_negatives)
+    return num_true_positives / (num_true_positives + num_false_negatives)
