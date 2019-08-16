@@ -28,7 +28,7 @@ from numpy import ndarray
 def box_overlaps(
         predicted: ndarray,
         truth: ndarray,
-        eps: float = 1e-12
+        eps: float = 1e-12,
 ) -> ndarray:
     """ Return the overlap between two lists of boxes.
 
