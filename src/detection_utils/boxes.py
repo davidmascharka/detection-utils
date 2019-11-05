@@ -25,10 +25,15 @@ from numpy import ndarray
 
 
 @numba.njit
-def box_overlaps(predicted: ndarray, truth: ndarray, eps: float = 1e-12) -> ndarray:
+def box_overlaps(
+        predicted: ndarray,
+        truth: ndarray,
+        eps: float = 1e-12,
+) -> ndarray:
     """ Return the overlap between two lists of boxes.
 
-    Calculates the intersection over union between a list of predicted boxes and a list of ground-truth boxes.
+    Calculates the intersection over union between a list of predicted boxes
+    and a list of ground-truth boxes.
 
     Parameters
     ----------
@@ -88,9 +93,10 @@ def generate_targets(
 ) -> Tuple[ndarray, ndarray]:
     """ Generate classification and regression targets from ground-truth boxes.
 
-    Each regression target is matched to its highest-overlapping ground-truth box. Those targets with less than a
-    `pos_thresh` IoU are marked as background. Targets with `neg_thresh` <= IoU < `pos_thresh` are flagged as
-    ignore boxes. Boxes are regressed based on their centers and widths/heights.
+    Each regression target is matched to its highest-overlapping ground-truth box. Those
+    targets with less than a `pos_thresh` IoU are marked as background. Targets with
+    `neg_thresh` <= IoU < `pos_thresh` are flagged as ignore boxes. Boxes are regressed
+    based on their centers and widths/heights.
 
     Parameters
     ----------
@@ -104,12 +110,13 @@ def generate_targets(
         The labels associated with each ground-truth box.
 
     pos_thresh : Real
-        The minimum overlap threshold between a truth and anchor box for that truth box to be 'responsible' for
-        detecting the anchor.
+        The minimum overlap threshold between a truth and anchor box for that truth box to
+        be 'responsible' for detecting the anchor.
 
     neg_thresh : Real
-        The maximum overlap threshold between a truth and anchor box for that anchor box to be called a negative.
-        Those anchor boxes with overlap greater than this but less than `pos_thresh` will be marked as ignored.
+        The maximum overlap threshold between a truth and anchor box for that anchor box to
+        be called a negative. Those anchor boxes with overlap greater than this but less than
+        `pos_thresh` will be marked as ignored.
 
     eps : Real, optional (default=1e-12)
         The epsilon to use for numerical stability.
@@ -117,9 +124,10 @@ def generate_targets(
     Returns
     -------
     Tuple[numpy.ndarray shape=(N,), numpy.ndarray shape=(N, 4)]
-        The classification and bounding box regression targets for each anchor box. Regressions are of format
-        (x-center, y-center, width, height). Classification targets of 0 indicate background, while targets of -1
-        indicate that this prediction should be ignored as a difficult case.
+        The classification and bounding box regression targets for each anchor box. Regressions
+        are of format (x-center, y-center, width, height). Classification targets of 0 indicate
+        background, while targets of -1 indicate that this prediction should be ignored as a
+        difficult case.
 
     Examples
     --------
@@ -222,10 +230,16 @@ def non_max_suppression(
         keep.append(i)
         all_others = order[1:]  # everything except the current box
 
-        width_overlaps = np.maximum(0, np.minimum(x2s[i], x2s[all_others]) - np.maximum(x1s[i], x1s[all_others]))
+        width_overlaps = np.maximum(
+            0,
+            np.minimum(x2s[i], x2s[all_others]) - np.maximum(x1s[i], x1s[all_others])
+        )
         width_overlaps = np.clip(width_overlaps, 0, clip_value)
 
-        height_overlaps = np.maximum(0, np.minimum(y2s[i], y2s[all_others]) - np.maximum(y1s[i], y1s[all_others]))
+        height_overlaps = np.maximum(
+            0,
+            np.minimum(y2s[i], y2s[all_others]) - np.maximum(y1s[i], y1s[all_others])
+        )
         height_overlaps = np.clip(height_overlaps, 0, clip_value)
 
         intersections = width_overlaps * height_overlaps

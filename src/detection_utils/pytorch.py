@@ -27,9 +27,10 @@ def softmax_focal_loss(
         targets: Tensor,
         alpha: float = 1,
         gamma: float = 0,
-        reduction: str = 'mean',
+        reduction: str = "mean",
 ) -> Tensor:
-    """ Returns the focal loss as described in https://arxiv.org/abs/1708.02002 which is given by -ɑ(1-p)ˠlog(p).
+    """ Returns the focal loss as described in https://arxiv.org/abs/1708.02002 which is
+    given by -ɑ(1-p)ˠlog(p).
 
     Parameters
     ----------
@@ -57,7 +58,7 @@ def softmax_focal_loss(
     -----
     When ɑ=1 and Ɣ=0, this is equivalent to softmax cross-entropy.
     """
-    if reduction not in {'mean', 'sum', 'none'}:
+    if reduction not in {"mean", "sum", "none"}:
         raise ValueError('Valid reduction strategies are "mean," "sum," and "none"')
 
     inputs = F.log_softmax(inputs, dim=1)
