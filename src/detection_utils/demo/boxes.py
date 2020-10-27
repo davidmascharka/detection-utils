@@ -3,7 +3,6 @@ import numpy as np
 import torch as tr
 
 from ..boxes import non_max_suppression
-from ..metrics import compute_precision, compute_recall
 
 DEFAULT_BOX_STEP = 16
 DEFAULT_BOX_SIZE = 32

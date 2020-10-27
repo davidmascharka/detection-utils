@@ -123,7 +123,7 @@ def generate_targets(
 
     Returns
     -------
-    Tuple[numpy.ndarray shape=(N,), numpy.ndarray shape=(N, 4)]
+    Tuple[numpy.ndarray shape=(N, K), numpy.ndarray shape=(N, K, 4)]
         The classification and bounding box regression targets for each anchor box. Regressions
         are of format (x-center, y-center, width, height). Classification targets of 0 indicate
         background, while targets of -1 indicate that this prediction should be ignored as a

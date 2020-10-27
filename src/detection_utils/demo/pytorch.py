@@ -4,7 +4,6 @@ import numpy as np
 import torch as tr
 import torch.nn.functional as F
 from torch import Tensor, nn
-
 from ..pytorch import softmax_focal_loss
 
 
