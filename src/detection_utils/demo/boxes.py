@@ -3,17 +3,37 @@ import numpy as np
 import torch as tr
 
 from ..boxes import non_max_suppression
+from ..metrics import compute_precision, compute_recall
 
 DEFAULT_BOX_STEP = 16
 DEFAULT_BOX_SIZE = 32
 
 
 def make_anchor_boxes(
-    *, height: int, width: int, box_size=DEFAULT_BOX_SIZE, box_stride=DEFAULT_BOX_STEP
+    *,
+    image_height: int,
+    image_width: int,
+    box_size=DEFAULT_BOX_SIZE,
+    box_stride=DEFAULT_BOX_STEP
 ) -> np.ndarray:
+    """
+
+    Parameters
+    ----------
+    image_height : int
+    image_width : int
+    box_size : int
+    box_stride : int
+
+    Returns
+    -------
+    anchor_boxes : numpy.ndarray, shape-(K, 4)
+        K strided anchor boxes, specified in row-major order. Each anchore
+        box is specified as (x-low, y-low, x-high, y-high)
+    """
     anchor_boxes = []
-    for y in range(0, height, box_stride):
-        for x in range(0, width, box_stride):
+    for y in range(0, image_height, box_stride):
+        for x in range(0, image_width, box_stride):
             anchor_boxes.append(
                 np.array([-box_size // 2, -box_size // 2, box_size // 2, box_size // 2])
                 + np.array([x, y, x, y])
@@ -30,8 +50,11 @@ def compute_detections(
     score_threshold: Optional[float] = None,
     nms_threshold: float = 0.3,
 ):
-    """ Compute a set of boxes, class predictions, and foreground scores from
-        detection model outputs.
+    """Compute a set of boxes, class predictions, and foreground scores from
+    detection model outputs.
+
+    Weak and redundant detections are filtered via score thresholding and NMS,
+    respectively.
 
     Parameters
     ----------
