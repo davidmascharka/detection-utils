@@ -1,13 +1,17 @@
-from typing import Tuple
+from detection_utils.boxes import generate_targets
+from pathlib import Path
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import pytorch_lightning as pl
 import torch as tr
 import torch.nn.functional as F
 from torch import Tensor, nn
+from torch.utils.data import DataLoader, TensorDataset
 from torch.optim import Adam
 
 from ..pytorch import softmax_focal_loss
+from .boxes import compute_batch_stats
 
 
 def loss(
@@ -51,23 +55,24 @@ def loss(
     # shape-(N*K, 4)
     regression_predictions = regression_predictions.reshape(-1, 4)
 
-    mask = tr.squeeze(class_targets > 0)
-    num_foreground = mask.sum().item()
-    if mask.numel() > 0:
+    is_true_foreground = tr.squeeze(class_targets > 0)
+    num_foreground = is_true_foreground.sum().item()
+    if is_true_foreground.numel() > 0:
         regression_loss = F.smooth_l1_loss(
-            regression_predictions[mask], regression_targets[mask]
+            regression_predictions[is_true_foreground],
+            regression_targets[is_true_foreground],
         )
     else:
         regression_loss = tr.tensor(0).float()
 
-    mask = tr.squeeze(class_targets > -1)
+    is_not_ignore = tr.squeeze(class_targets > -1)
 
     # the sum of focal loss terms is normalized by the number
     # of anchors assigned to a ground-truth box
     classification_loss = (
         softmax_focal_loss(
-            class_predictions[mask],
-            class_targets[mask],
+            class_predictions[is_not_ignore],
+            class_targets[is_not_ignore],
             alpha=0.25,
             gamma=2,
             reduction="sum",
@@ -79,8 +84,10 @@ def loss(
 
 
 class ShapeDetectionModel(pl.LightningModule):
-    def __init__(self):
+    def __init__(self, data_experiment_path: Optional[Union[str, Path]] = None):
         super().__init__()
+        self.data_path = Path(data_experiment_path) if data_experiment_path is not None else None
+
         self.conv1 = nn.Conv2d(3, 10, 3, padding=1)
         self.conv2 = nn.Conv2d(10, 20, 3, padding=1)
         self.conv3 = nn.Conv2d(20, 30, 3, padding=1)
@@ -151,9 +158,10 @@ class ShapeDetectionModel(pl.LightningModule):
         )
         return total_cls_loss + total_reg_loss
 
-    def validation_step(self, batch: Tuple[Tensor, ...], batch_idx: int) -> Tensor:
+    def validation_step(self, batch: Tuple[Tensor, ...], batch_idx: int):
         imgs, class_targets, bbox_targets = batch
         class_predictions, regression_predictions = self(imgs)
+
         total_cls_loss, total_reg_loss = loss(
             class_predictions, regression_predictions, class_targets, bbox_targets,
         )
@@ -161,3 +169,55 @@ class ShapeDetectionModel(pl.LightningModule):
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=5e-4)
+
+    def setup(self, stage: str) -> None:
+        from .data import load_data
+        from .boxes import make_anchor_boxes
+
+        assert self.data_path is not None
+
+        images, self.train_boxes, self.train_labels = load_data(
+            self.data_path / "train"
+        )
+        H, W = images.shape[1:3]
+        val_images, self.val_boxes, self.val_labels = load_data(self.data_path / "val")
+
+        self.train_images = tr.tensor(images.transpose((0, 3, 1, 2)))
+        self.val_images = tr.tensor(val_images.transpose((0, 3, 1, 2)))
+        self.anchor_boxes = make_anchor_boxes(image_height=H, image_width=W)
+
+    def train_dataloader(self) -> DataLoader:
+
+        train_cls_targs, train_reg_targs = zip(
+            *(
+                generate_targets(self.anchor_boxes, bxs, lbls, 0.2, 0.1)
+                for bxs, lbls in zip(self.train_boxes, self.train_labels)
+            )
+        )
+
+        train_reg_targs = tr.tensor(train_reg_targs).float()
+        train_cls_targs = tr.tensor(train_cls_targs).long()
+        return DataLoader(
+            TensorDataset(self.train_images, train_cls_targs, train_reg_targs),
+            batch_size=16,
+            pin_memory=True,
+            num_workers=4,
+        )
+
+    def val_dataloader(self) -> DataLoader:
+
+        val_cls_targs, val_reg_targs = zip(
+            *(
+                generate_targets(self.anchor_boxes, bxs, lbls, 0.2, 0.1)
+                for bxs, lbls in zip(self.val_boxes, self.val_labels)
+            )
+        )
+
+        val_reg_targs = tr.tensor(val_reg_targs).float()
+        val_cls_targs = tr.tensor(val_cls_targs).long()
+        return DataLoader(
+            TensorDataset(self.val_images, val_cls_targs, val_reg_targs),
+            batch_size=16,
+            pin_memory=True,
+            num_workers=4,
+        )

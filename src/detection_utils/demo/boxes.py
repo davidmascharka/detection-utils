@@ -1,8 +1,10 @@
-from typing import Optional
+from typing import Optional, Tuple
+
 import numpy as np
 import torch as tr
 
 from ..boxes import non_max_suppression
+from ..metrics import compute_precision, compute_recall
 
 DEFAULT_BOX_STEP = 16
 DEFAULT_BOX_SIZE = 32
@@ -121,3 +123,74 @@ def compute_detections(
     class_predictions = class_predictions[keep_idxs]
 
     return box_predictions, class_predictions, scores
+
+
+def compute_batch_stats(
+    class_predictions : tr.Tensor,
+    regression_predictions : tr.Tensor,
+    boxes,
+    labels,
+    feature_map_width,
+    anchor_box_step=16,
+    anchor_box_size=32,
+    score_threshold: Optional[float] = None,
+    nms_iou_threshold: float = 0.3,
+) -> Tuple[tr.Tensor, tr.Tensor]:
+    """Compute the batch statistics (AP and AR) given a batch of predictions and truth.
+
+    Parameters
+    ----------
+    class_predictions : Tensor, shape=(N, K, C)
+        The predicted class scores of each of N images at each of K anchor boxes.
+
+    regression_predictions : Tensor, shape=(N, K, 4)
+        The predicted regression values of each of N images at each of K anchor boxes.
+
+    boxes : numpy.ndarray, shape=(N,)
+        The truth boxes for each image. Note that each of the N elements is of
+        shape (W_i, 4), where W_i is the number of objects in image i.
+
+    labels : numpy.ndarray, shape=(N,)
+        The truth labels for each image. Note that each of the N elements is of
+        shape (W_i,), where  W_i is the number of objects in image i.
+
+    feature_map_width : int, optional (default=40)
+        The width of the feature map.
+
+    anchor_box_step : int, optional (default=16)
+        The stride across the image at which anchor boxes are placed.
+
+    anchor_box_size : int, optional (default=32)
+        The side length of each anchor box.
+
+    score_threshold: Optional[float]
+        If specified, detections with foreground scores below this
+        threshold are ignored
+
+    nms_iou_threshold: float, optional (default=0.3)
+        The IoU threshold to use for NMS, above which one of two box will be suppressed.
+
+
+    Returns
+    -------
+    Tuple[List[float], List[float]]
+        The (aps, ars) for the images.
+    """
+    aps, ars = [], []
+    for i in range(len(class_predictions)):
+        truth_detections = np.hstack((boxes[i], labels[i][:, None]))
+
+        box_preds, class_preds, scores = compute_detections(
+            class_predictions[i],
+            regression_predictions[i],
+            feature_map_width,
+            anchor_box_step,
+            anchor_box_size,
+            score_threshold=score_threshold,
+            nms_threshold=nms_iou_threshold,
+        )
+
+        detections = np.hstack((box_preds, class_preds))
+        aps.append(compute_precision(detections, truth_detections, 0.5))
+        ars.append(compute_recall(detections, truth_detections, 0.5))
+    return tr.tensor(aps, dtype=tr.float32), tr.tensor(ars, dtype=tr.float32)
