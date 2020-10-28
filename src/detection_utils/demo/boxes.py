@@ -50,7 +50,7 @@ def compute_detections(
     anchor_box_size: int = DEFAULT_BOX_SIZE,
     score_threshold: Optional[float] = None,
     nms_threshold: float = 0.3,
-):
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute a set of boxes, class predictions, and foreground scores from
     detection model outputs.
 
@@ -59,11 +59,11 @@ def compute_detections(
 
     Parameters
     ----------
-    classifications : torch.Tensor, shape=(N, R*C, # classes)
-        A set of class predictions at each spatial location.
+    classifications : torch.Tensor, shape=(R*C, # classes)
+        The class predictions at each spatial location.
 
-    regressions : torch.Tensor, shape=(N, R*C, 4)
-        A set of predicted box offsets, in (x, y, w, h) at each spatial location.
+    regressions : torch.Tensor, shape=(R*C, 4)
+        The predicted box offsets, in (x, y, w, h) at each spatial location.
 
     feature_map_width : int
         The number of pixels in the feature map, along the x direction.
@@ -83,8 +83,8 @@ def compute_detections(
 
     Returns
     -------
-    Tuple[numpy.ndarray shape=(R*C, 4), numpy.ndarray shape=(R*C, 1), numpy.ndarray shape=(R*C,)]
-        The (boxes, class predictions, foreground scores) at each spatial location.
+    Tuple[numpy.ndarray shape=(N_det, 4), numpy.ndarray shape=(N_det, 1), numpy.ndarray shape=(N_det,)]
+        The (boxes, class predictions, foreground scores) for each detection above the specified threshold(s)
     """
     box_predictions = np.empty((len(regressions), 4), dtype=np.float32)
     scores = tr.softmax(classifications, dim=-1).detach().cpu().numpy()
