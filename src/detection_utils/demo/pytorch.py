@@ -1,14 +1,15 @@
-from detection_utils.boxes import generate_targets
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import pytorch_lightning as pl
 import torch as tr
 import torch.nn.functional as F
 from torch import Tensor, nn
-from torch.utils.data import DataLoader, TensorDataset
 from torch.optim import Adam
+from torch.utils.data import DataLoader, TensorDataset
+
+from detection_utils.boxes import generate_targets
 
 from ..pytorch import softmax_focal_loss
 from .boxes import compute_batch_stats
@@ -177,8 +178,7 @@ class ShapeDetectionModel(pl.LightningModule):
             regression_predictions=regression_predictions,
             boxes=self.val_boxes[start:stop],
             labels=self.val_labels[start:stop],
-            feature_map_width=imgs.shape[2]
-            // 16,  # backbone downsamples by factor 16
+            feature_map_width=imgs.shape[2] // 16,  # backbone downsamples by factor 16
         )
         self.log("val_precision", precision.mean(), prog_bar=True)
         self.log("val_recall", recall.mean(), prog_bar=True)
@@ -187,8 +187,8 @@ class ShapeDetectionModel(pl.LightningModule):
         return Adam(self.parameters(), lr=5e-4)
 
     def setup(self, stage: str) -> None:
-        from .data import load_data
         from .boxes import make_anchor_boxes
+        from .data import load_data
 
         assert self.data_path is not None
 
@@ -241,3 +241,38 @@ class ShapeDetectionModel(pl.LightningModule):
             shuffle=False,
             drop_last=True,
         )
+
+    def get_detections(
+        self, imgs: Tensor, score_threshold=None, nms_threshold=0.3
+    ) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        """"
+        Computes the classification scores and bounding box regression associated
+        with each anchor box of each image.
+
+        Parameters
+        ----------
+        imgs : Tensor, shape-(N, 3, H, W)
+            A batch of N images.
+
+        Returns
+        -------
+        List[Tuple[np.ndarray, np.ndarray, np.ndarray]]
+            The boxes, labels, and confidence scores for each of the N images
+
+        Notes
+        -----
+        The anchor boxes are flattened in row-major order"""
+        from detection_utils.demo.boxes import compute_detections
+
+        class_predictions, regression_predictions = self.forward(imgs)
+
+        return [
+            compute_detections(
+                classifications=cls,
+                regressions=regr,
+                feature_map_width=imgs.shape[-1] // 16,
+                nms_threshold=nms_threshold,
+                score_threshold=score_threshold,
+            )
+            for cls, regr in zip(class_predictions, regression_predictions)
+        ]
