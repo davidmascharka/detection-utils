@@ -247,8 +247,7 @@ class ShapeDetectionModel(pl.LightningModule):
         self, imgs: Tensor, score_threshold=None, nms_threshold=0.3
     ) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """"
-        Computes the classification scores and bounding box regression associated
-        with each anchor box of each image.
+        Computes the best bounding boxes and classification scores
 
         Parameters
         ----------
@@ -258,7 +257,7 @@ class ShapeDetectionModel(pl.LightningModule):
         Returns
         -------
         List[Tuple[np.ndarray, np.ndarray, np.ndarray]]
-            The boxes, labels, and confidence scores for each of the N images
+            The (boxes, labels, and confidence scores) for each of the N images
 
         Notes
         -----
