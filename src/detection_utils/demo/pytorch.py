@@ -179,6 +179,7 @@ class ShapeDetectionModel(pl.LightningModule):
             boxes=self.val_boxes[start:stop],
             labels=self.val_labels[start:stop],
             feature_map_width=imgs.shape[2] // 16,  # backbone downsamples by factor 16
+            nms_iou_threshold=0.1,
         )
         self.log("val_precision", precision.mean(), prog_bar=True)
         self.log("val_recall", recall.mean(), prog_bar=True)
