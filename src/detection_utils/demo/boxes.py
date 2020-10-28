@@ -126,13 +126,13 @@ def compute_detections(
 
 
 def compute_batch_stats(
-    class_predictions : tr.Tensor,
-    regression_predictions : tr.Tensor,
-    boxes,
-    labels,
-    feature_map_width,
-    anchor_box_step=16,
-    anchor_box_size=32,
+    class_predictions: tr.Tensor,
+    regression_predictions: tr.Tensor,
+    boxes: np.ndarray,
+    labels: np.ndarray,
+    feature_map_width: int,
+    anchor_box_step: int = DEFAULT_BOX_STEP,
+    anchor_box_size: int = DEFAULT_BOX_SIZE,
     score_threshold: Optional[float] = None,
     nms_iou_threshold: float = 0.3,
 ) -> Tuple[tr.Tensor, tr.Tensor]:

@@ -86,7 +86,9 @@ def loss(
 class ShapeDetectionModel(pl.LightningModule):
     def __init__(self, data_experiment_path: Optional[Union[str, Path]] = None):
         super().__init__()
-        self.data_path = Path(data_experiment_path) if data_experiment_path is not None else None
+        self.data_path = (
+            Path(data_experiment_path) if data_experiment_path is not None else None
+        )
 
         self.conv1 = nn.Conv2d(3, 10, 3, padding=1)
         self.conv2 = nn.Conv2d(10, 20, 3, padding=1)
@@ -165,7 +167,21 @@ class ShapeDetectionModel(pl.LightningModule):
         total_cls_loss, total_reg_loss = loss(
             class_predictions, regression_predictions, class_targets, bbox_targets,
         )
-        self.log("val_loss", total_cls_loss + total_reg_loss)
+        self.log("val_loss", total_cls_loss + total_reg_loss, prog_bar=True)
+
+        start = len(imgs) * (batch_idx)
+        stop = len(imgs) * (batch_idx + 1)
+
+        precision, recall = compute_batch_stats(
+            class_predictions=class_predictions,
+            regression_predictions=regression_predictions,
+            boxes=self.val_boxes[start:stop],
+            labels=self.val_labels[start:stop],
+            feature_map_width=imgs.shape[2]
+            // 16,  # backbone downsamples by factor 16
+        )
+        self.log("val_precision", precision.mean(), prog_bar=True)
+        self.log("val_recall", recall.mean(), prog_bar=True)
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=5e-4)
@@ -202,6 +218,8 @@ class ShapeDetectionModel(pl.LightningModule):
             batch_size=16,
             pin_memory=True,
             num_workers=4,
+            shuffle=True,
+            drop_last=True,
         )
 
     def val_dataloader(self) -> DataLoader:
@@ -220,4 +238,6 @@ class ShapeDetectionModel(pl.LightningModule):
             batch_size=16,
             pin_memory=True,
             num_workers=4,
+            shuffle=False,
+            drop_last=True,
         )
