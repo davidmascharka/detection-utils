@@ -121,6 +121,7 @@ def compute_detections(
     keep_idxs = non_max_suppression(box_predictions, scores, threshold=nms_threshold)
     box_predictions = box_predictions[keep_idxs]
     class_predictions = class_predictions[keep_idxs]
+    scores = scores[keep_idxs]
 
     return box_predictions, class_predictions, scores
 
