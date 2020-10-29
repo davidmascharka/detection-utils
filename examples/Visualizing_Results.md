@@ -27,7 +27,7 @@ import matplotlib as plt
 
 ```python
 loaded = ShapeDetectionModel.load_from_checkpoint(
-    "./lightning_logs/version_28/checkpoints/epoch=187.ckpt", data_experiment_path="./data"
+    "./lightning_logs/version_30/checkpoints/epoch=94.ckpt", data_experiment_path="./data"
 )
 
 loaded.setup("fit")
@@ -38,7 +38,14 @@ boxes, labels, scores = zip(*loaded.get_detections(loaded.val_images[:], nms_thr
 ```
 
 ```python
-img_id = -10
+img_id = 0
+
+fig, ax = plot_img(loaded.val_images[img_id])
+draw_detections(ax, boxes=boxes[img_id], labels=labels[img_id])
+```
+
+```python
+img_id = 0
 
 fig, ax = plot_img(loaded.val_images[img_id])
 draw_detections(ax, boxes=boxes[img_id], labels=labels[img_id])

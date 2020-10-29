@@ -95,6 +95,10 @@ class ShapeDetectionModel(pl.LightningModule):
         self.conv2 = nn.Conv2d(10, 20, 3, padding=1)
         self.conv3 = nn.Conv2d(20, 30, 3, padding=1)
         self.conv4 = nn.Conv2d(30, 40, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(10)
+        self.bn2 = nn.BatchNorm2d(20)
+        self.bn3 = nn.BatchNorm2d(30)
+        self.bn4 = nn.BatchNorm2d(40)
 
         # background / rectangle / triangle / circle
         self.classification = nn.Conv2d(40, 4, 1)
@@ -136,10 +140,10 @@ class ShapeDetectionModel(pl.LightningModule):
         Notes
         -----
         The anchor boxes are flattened in row-major order"""
-        imgs = F.max_pool2d(F.relu(self.conv1(imgs)), 2)
-        imgs = F.max_pool2d(F.relu(self.conv2(imgs)), 2)
-        imgs = F.max_pool2d(F.relu(self.conv3(imgs)), 2)
-        imgs = F.max_pool2d(F.relu(self.conv4(imgs)), 2)
+        imgs = F.max_pool2d(F.relu(self.bn1(self.conv1(imgs))), 2)
+        imgs = F.max_pool2d(F.relu(self.bn2(self.conv2(imgs))), 2)
+        imgs = F.max_pool2d(F.relu(self.bn3(self.conv3(imgs))), 2)
+        imgs = F.max_pool2d(F.relu(self.bn4(self.conv4(imgs))), 2)
 
         # (N, num-classes, R, C) -> (N, R, C, num-classes)
         classifications = self.classification(imgs).permute(0, 2, 3, 1)
@@ -247,7 +251,7 @@ class ShapeDetectionModel(pl.LightningModule):
         self, imgs: Tensor, score_threshold=None, nms_threshold=0.3
     ) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """"
-        Computes the best bounding boxes and classification scores
+        Computes the best bounding boxes and classification scores.
 
         Parameters
         ----------
@@ -264,7 +268,15 @@ class ShapeDetectionModel(pl.LightningModule):
         The anchor boxes are flattened in row-major order"""
         from detection_utils.demo.boxes import compute_detections
 
-        class_predictions, regression_predictions = self.forward(imgs)
+        was_training = self.training
+
+        self.eval()
+        try:
+            with tr.no_grad():
+                class_predictions, regression_predictions = self.forward(imgs)
+        finally:
+            if was_training:
+                self.train(mode=True)
 
         return [
             compute_detections(
