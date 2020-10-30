@@ -27,7 +27,7 @@ import matplotlib as plt
 
 ```python
 loaded = ShapeDetectionModel.load_from_checkpoint(
-    "./lightning_logs/version_30/checkpoints/epoch=94.ckpt", data_experiment_path="./data"
+    "./lightning_logs/version_33/checkpoints/last.ckpt", data_experiment_path="./data"
 )
 
 loaded.setup("fit")

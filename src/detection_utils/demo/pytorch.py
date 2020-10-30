@@ -163,7 +163,9 @@ class ShapeDetectionModel(pl.LightningModule):
         total_cls_loss, total_reg_loss = loss(
             class_predictions, regression_predictions, class_targets, bbox_targets,
         )
-        return total_cls_loss + total_reg_loss
+        tot_loss = total_cls_loss + total_reg_loss
+        self.log("train_loss", total_cls_loss + total_reg_loss)
+        return tot_loss
 
     def validation_step(self, batch: Tuple[Tensor, ...], batch_idx: int):
         imgs, class_targets, bbox_targets = batch
@@ -185,8 +187,12 @@ class ShapeDetectionModel(pl.LightningModule):
             feature_map_width=imgs.shape[2] // 16,  # backbone downsamples by factor 16
             nms_iou_threshold=0.1,
         )
-        self.log("val_precision", precision.mean(), prog_bar=True)
-        self.log("val_recall", recall.mean(), prog_bar=True)
+        ap = precision.mean()
+        ar = recall.mean()
+        self.log("val_precision", ap)
+        self.log("val_recall", ar)
+
+        self.log("ap+ar", ap + ar)
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=5e-4)
@@ -257,6 +263,13 @@ class ShapeDetectionModel(pl.LightningModule):
         ----------
         imgs : Tensor, shape-(N, 3, H, W)
             A batch of N images.
+
+        score_threshold: Optional[float]
+            If specified, detections with foreground scores below this
+            threshold are ignored
+
+        nms_threshold: float, optional (default=0.3)
+            The IoU threshold to use for NMS, above which one of two box will be suppressed.
 
         Returns
         -------
