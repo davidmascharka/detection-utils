@@ -21,12 +21,92 @@ import numpy as np
 from numpy import ndarray
 
 from .boxes import box_overlaps
+from detection_utils.boxes import DEFAULT_POS_THRESHOLD
+
+from typing import NamedTuple
+
+
+def confusion_matrix(
+    prediction_detections: ndarray,
+    truth_detections: ndarray,
+    threshold: float = DEFAULT_POS_THRESHOLD,
+    num_foreground_classes: int = 3,
+) -> np.ndarray:
+    """ Compute confusion matrix to evaluate the accuracy of a classification.
+
+    By definition a confusion matrix :math:`C` is such that :math:`C_{i, j}`
+    is equal to the number of observations known to be in group :math:`i` and
+    predicted to be in group :math:`j`.
+
+    Thus in binary classification, the count of true negatives is
+    :math:`C_{0,0}`, false negatives is :math:`C_{1,0}`, true positives is
+    :math:`C_{1,1}` and false positives is :math:`C_{0,1}`.
+
+    Parameters
+    ----------
+    prediction_detections : numpy.ndarray, shape=(N, 5)
+        The predicted objects, in (left, top, right, bottom, class) format.
+
+    truth_detections : numpy.ndarray, shape=(K, 5)
+        The ground-truth objects in (left, top, right, bottom, class) format.
+
+    threshold : Real, optional (default=0.5)
+        The IoU threshold above which a predicted box will be associated
+        with an overlapping truth box.
+
+    num_foreground_classes: int, optional (default=3)
+        The number of foreground class in the problem
+
+    Returns
+    -------
+    conf_matrix : numpy.ndarray, shape-(N_class, N_class)
+        Confusion matrix whose i-th row and j-th column entry
+        indicates the number of samples with true label being i-th
+        class and predicted label being j-th class.
+
+    Notes
+    -----
+    The class IDs must be consecutive integers, starting with 0, which
+    must be associated with the background
+    """
+
+    predictions = prediction_detections[:, -1]  # shape-(N,) labels
+    truths = truth_detections[:, -1]  # shape-(N,) labels
+
+    ious = box_overlaps(prediction_detections[:, :4], truth_detections[:, :4])
+
+    # shape-(N,)
+    max_ious = ious.max(axis=1)
+    # index of highest-overlap truth box associated with each prediction
+    max_idxs = ious.argmax(axis=1)  # shape-(N,)
+
+    target_labels = truths[max_idxs]  # shape-(N,)
+
+    # boxes with insufficient overlap are associated with background
+    target_labels[max_ious < threshold] = 0
+
+    conf_mat = np.zeros(
+        (num_foreground_classes + 1, num_foreground_classes + 1), dtype=np.int32
+    )
+    np.add.at(conf_mat, (target_labels, predictions), 1)
+    return conf_mat
+
+
+class DetectionStats(NamedTuple):
+    precision: float
+    recall: float
+
+
+def compute_precision_and_recall(conf_matrix: np.ndarray) -> DetectionStats:
+    # TN = conf_matrix[0, 0]
+    FP = conf_matrix[0, 1:].sum()
+    FN = conf_matrix[1:, 0].sum()
+    TP = conf_matrix[1:, 1:].sum()
+    return DetectionStats(precision=(TP / (TP + FP)), recall=(TP / (TP + FN)))
 
 
 def compute_precision(
-        prediction_detections: ndarray,
-        truth_detections: ndarray,
-        threshold: float = 0.5,
+    prediction_detections: ndarray, truth_detections: ndarray, threshold: float = 0.5,
 ) -> float:
     """ Compute the average precision of predictions given targets.
 
@@ -91,9 +171,7 @@ def compute_precision(
 
 
 def compute_recall(
-        prediction_detections: ndarray,
-        truth_detections: ndarray,
-        threshold: float = 0.5,
+    prediction_detections: ndarray, truth_detections: ndarray, threshold: float = 0.5,
 ) -> float:
     """ Compute the average recall of predictions given targets.
 
@@ -136,7 +214,9 @@ def compute_recall(
     truths = truth_detections[:, -1]
 
     if truths.sum() == 0:
-        return 1  # if there are no targets, then by definition we've found all the targets
+        return (
+            1  # if there are no targets, then by definition we've found all the targets
+        )
 
     if predictions.sum() == 0:
         return 0  # if there are targets and we predict there are none, we can short circuit
