@@ -25,6 +25,8 @@ from detection_utils.boxes import DEFAULT_POS_THRESHOLD
 
 from typing import NamedTuple
 
+__all__ = ["confusion_matrix", "precision_and_recall"]
+
 
 def confusion_matrix(
     prediction_detections: ndarray,
@@ -70,8 +72,8 @@ def confusion_matrix(
     must be associated with the background
     """
 
-    predictions = prediction_detections[:, -1]  # shape-(N,) labels
-    truths = truth_detections[:, -1]  # shape-(N,) labels
+    predictions = prediction_detections[:, -1].astype(int)  # shape-(N,) labels
+    truths = truth_detections[:, -1].astype(int)  # shape-(K,) labels
 
     ious = box_overlaps(prediction_detections[:, :4], truth_detections[:, :4])
 
@@ -80,15 +82,25 @@ def confusion_matrix(
     # index of highest-overlap truth box associated with each prediction
     max_idxs = ious.argmax(axis=1)  # shape-(N,)
 
+    # target label associated with each prediction
     target_labels = truths[max_idxs]  # shape-(N,)
 
-    # boxes with insufficient overlap are associated with background
+    # prediction boxes that don't sufficiently overlap with true
+    # boxes are ascribed "background" as their target label
     target_labels[max_ious < threshold] = 0
 
+    # stores truth-label x target-label
     conf_mat = np.zeros(
         (num_foreground_classes + 1, num_foreground_classes + 1), dtype=np.int32
     )
+
     np.add.at(conf_mat, (target_labels, predictions), 1)
+
+    # true boxes with no sufficiently overlapping prediction are effectively
+    # predicted as "background"
+    unmatched_targets = ious.max(axis=0) < threshold  # shape-(K,)
+    np.add.at(conf_mat[:, 0], truths[unmatched_targets], 1)
+
     return conf_mat
 
 
@@ -97,12 +109,47 @@ class DetectionStats(NamedTuple):
     recall: float
 
 
-def compute_precision_and_recall(conf_matrix: np.ndarray) -> DetectionStats:
+def div_nan_is_1(numerator: int, denominator: int) -> int:
+    """ Returns numerator/denominator, treating 0/0 as 1."""
+    if numerator == 0 and denominator == 0:
+        return 1
+    else:
+        return numerator / denominator
+
+
+def precision_and_recall(conf_matrix: np.ndarray) -> DetectionStats:
+    """
+    Given the confusion matrix, C, computes the precision and recall:
+               Precision = TP / (TP + FP)
+               Recall    = TP / (TP + FN)
+
+    Parameters
+    ----------
+    conf_matrix : ndarray, shape-(N_class, N_class)
+       :math:`C_{0,0}` is assumed to be the count of true
+       negatives.
+
+    Returns
+    -------
+    stats : DetectionStats
+        A named tuple storing (precision, recall)
+
+    Notes
+    -----
+    The statistics reported here reflect only detection performance; i.e.
+    all foreground classes are treated singularly as "positive" and background
+    is treated as "negative".
+
+
+    """
     # TN = conf_matrix[0, 0]
     FP = conf_matrix[0, 1:].sum()
     FN = conf_matrix[1:, 0].sum()
     TP = conf_matrix[1:, 1:].sum()
-    return DetectionStats(precision=(TP / (TP + FP)), recall=(TP / (TP + FN)))
+
+    return DetectionStats(
+        precision=div_nan_is_1(TP, (TP + FP)), recall=div_nan_is_1(TP, (TP + FN))
+    )
 
 
 def compute_precision(
