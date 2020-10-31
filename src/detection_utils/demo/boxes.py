@@ -3,8 +3,11 @@ from typing import Optional, Tuple
 import numpy as np
 import torch as tr
 
-from ..boxes import non_max_suppression
-from ..metrics import compute_precision, compute_recall
+from ..boxes import non_max_suppression, DEFAULT_NMS_THRESHOLD
+from ..metrics import (
+    confusion_matrix,
+    precision_and_recall,
+)
 
 DEFAULT_BOX_STEP = 16
 DEFAULT_BOX_SIZE = 32
@@ -23,8 +26,8 @@ def make_anchor_boxes(
     ----------
     image_height : int
     image_width : int
-    box_size : int
-    box_stride : int
+    box_size : int, optional
+    box_stride : int, optional
 
     Returns
     -------
@@ -49,7 +52,7 @@ def compute_detections(
     anchor_box_step: int = DEFAULT_BOX_STEP,
     anchor_box_size: int = DEFAULT_BOX_SIZE,
     score_threshold: Optional[float] = None,
-    nms_threshold: float = 0.3,
+    nms_threshold: float = DEFAULT_NMS_THRESHOLD,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute a set of boxes, class predictions, and foreground scores from
     detection model outputs.
@@ -68,17 +71,17 @@ def compute_detections(
     feature_map_width : int
         The number of pixels in the feature map, along the x direction.
 
-    anchor_box_step : int
+    anchor_box_step : int, optional
         The number of pixels (in image space) between each anchor box.
 
-    anchor_box_size : int
+    anchor_box_size : int, optional
         The side length of the anchor box.
 
     score_threshold: Optional[float]
         If specified, detections with foreground scores below this
         threshold are ignored
 
-    nms_threshold: float, optional (default=0.3)
+    nms_threshold: float, optional
         The IoU threshold to use for NMS, above which one of two box will be suppressed.
 
     Returns
@@ -135,8 +138,8 @@ def compute_batch_stats(
     anchor_box_step: int = DEFAULT_BOX_STEP,
     anchor_box_size: int = DEFAULT_BOX_SIZE,
     score_threshold: Optional[float] = None,
-    nms_iou_threshold: float = 0.3,
-) -> Tuple[tr.Tensor, tr.Tensor]:
+    nms_iou_threshold: float = DEFAULT_NMS_THRESHOLD,
+) -> Tuple[tr.Tensor, tr.Tensor, tr.Tensor]:
     """Compute the batch statistics (AP and AR) given a batch of predictions and truth.
 
     Parameters
@@ -155,29 +158,33 @@ def compute_batch_stats(
         The truth labels for each image. Note that each of the N elements is of
         shape (W_i,), where  W_i is the number of objects in image i.
 
-    feature_map_width : int, optional (default=40)
+    feature_map_width : int
         The width of the feature map.
 
-    anchor_box_step : int, optional (default=16)
+    anchor_box_step : int, optional
         The stride across the image at which anchor boxes are placed.
 
-    anchor_box_size : int, optional (default=32)
+    anchor_box_size : int, optional
         The side length of each anchor box.
 
     score_threshold: Optional[float]
         If specified, detections with foreground scores below this
         threshold are ignored
 
-    nms_iou_threshold: float, optional (default=0.3)
+    nms_iou_threshold: float, optional
         The IoU threshold to use for NMS, above which one of two box will be suppressed.
 
 
     Returns
     -------
-    Tuple[List[float], List[float]]
-        The (aps, ars) for the images.
+    Tuple[tr.Tensor, tr.Tensor, tr.Tensor]
+        - confusion matrix accumulated over images, shape-(N_class, N_class)
+        - precision for each image, shape-(N,)
+        - recall for each image, shape-(N,)
     """
-    aps, ars = [], []
+    precisions, recalls = [], []
+    accumed_confusion = np.zeros((4, 4), dtype=np.int32)
+
     for i in range(len(class_predictions)):
         truth_detections = np.hstack((boxes[i], labels[i][:, None]))
 
@@ -192,6 +199,16 @@ def compute_batch_stats(
         )
 
         detections = np.hstack((box_preds, class_preds))
-        aps.append(compute_precision(detections, truth_detections, 0.5))
-        ars.append(compute_recall(detections, truth_detections, 0.5))
-    return tr.tensor(aps, dtype=tr.float32), tr.tensor(ars, dtype=tr.float32)
+        conf = confusion_matrix(
+            prediction_detections=detections, truth_detections=truth_detections
+        )
+        stats = precision_and_recall(conf)
+        precisions.append(stats.precision)
+        recalls.append(stats.recall)
+        accumed_confusion += conf
+
+    return (
+        tr.tensor(accumed_confusion),
+        tr.tensor(precisions, dtype=tr.float32),
+        tr.tensor(recalls, dtype=tr.float32),
+    )
