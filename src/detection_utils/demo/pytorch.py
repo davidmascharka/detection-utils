@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from detection_utils.boxes import generate_targets
 
 from ..pytorch import softmax_focal_loss
-from .boxes import compute_batch_stats
+from .boxes import compute_batch_stats, DEFAULT_NMS_THRESHOLD
 
 
 def loss(
@@ -179,20 +179,30 @@ class ShapeDetectionModel(pl.LightningModule):
         start = len(imgs) * (batch_idx)
         stop = len(imgs) * (batch_idx + 1)
 
-        precision, recall = compute_batch_stats(
+        confusion_matrix, precision, recall = compute_batch_stats(
             class_predictions=class_predictions,
             regression_predictions=regression_predictions,
             boxes=self.val_boxes[start:stop],
             labels=self.val_labels[start:stop],
             feature_map_width=imgs.shape[2] // 16,  # backbone downsamples by factor 16
-            nms_iou_threshold=0.1,
         )
+
+        normed_conf_matrix = confusion_matrix / tr.sum(
+            confusion_matrix, dim=0, keepdim=True
+        )
+
+        # note: exclude negatives from classification accuracy
+        val_acc = tr.einsum("ii", normed_conf_matrix[1:, 1:]) / (
+            len(normed_conf_matrix) - 1
+        )
+        self.log("val_acc", val_acc)
+
         ap = precision.mean()
         ar = recall.mean()
         self.log("val_precision", ap)
         self.log("val_recall", ar)
 
-        self.log("ap+ar", ap + ar)
+        self.log("ap+ar+acc", ap + ar + val_acc)
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=5e-4)
@@ -254,7 +264,10 @@ class ShapeDetectionModel(pl.LightningModule):
         )
 
     def get_detections(
-        self, imgs: Tensor, score_threshold=None, nms_threshold=0.3
+        self,
+        imgs: Tensor,
+        score_threshold: float = None,
+        nms_threshold: float = DEFAULT_NMS_THRESHOLD,
     ) -> List[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         """"
         Computes the best bounding boxes and classification scores.
@@ -268,7 +281,7 @@ class ShapeDetectionModel(pl.LightningModule):
             If specified, detections with foreground scores below this
             threshold are ignored
 
-        nms_threshold: float, optional (default=0.3)
+        nms_threshold: float, optional
             The IoU threshold to use for NMS, above which one of two box will be suppressed.
 
         Returns
