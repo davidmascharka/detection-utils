@@ -25,7 +25,8 @@ from numpy import ndarray
 
 
 DEFAULT_POS_THRESHOLD = 0.3
-DEFAULT_NEG_THRESHOLD = 0.3
+DEFAULT_NEG_THRESHOLD = 0.2
+DEFAULT_NMS_THRESHOLD = 0.1
 
 
 @numba.njit
@@ -181,11 +182,12 @@ def generate_targets(
 def non_max_suppression(
         boxes: ndarray,
         scores: ndarray,
-        threshold: float = 0.7,
+        threshold: float = DEFAULT_NMS_THRESHOLD,
         clip_value: float = 1e6,
         eps: float = 1e-12,
 ) -> ndarray:
-    """ Return the indices of non-suppressed detections after applying non-maximum suppression with the given threshold.
+    """ Return the indices of non-suppressed detections after applying non-maximum suppression
+    with the given threshold.
 
     Parameters
     ----------
@@ -195,7 +197,7 @@ def non_max_suppression(
     scores : np.ndarray[Real], shape=(N,)
         The detection score for each box.
 
-    threshold : float ∈ [0, 1], optional (default=0.7)
+    threshold : float ∈ [0, 1], optional
         The IoU threshold to use for NMS, above which one of two box will be suppressed.
 
     clip_value : Real, optional (default=1e6)
@@ -207,7 +209,8 @@ def non_max_suppression(
     Returns
     -------
     np.ndarray[int], shape=(k,)
-        The (sorted) subset of detections to keep, where k is the number of non-suppressed inputs and k <= N.
+        The (sorted) subset of detections to keep, where k is the number of non-suppressed inputs
+        and k <= N.
 
     Examples
     --------
