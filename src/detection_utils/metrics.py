@@ -21,7 +21,7 @@ import numpy as np
 from numpy import ndarray
 
 from .boxes import box_overlaps
-from detection_utils.boxes import DEFAULT_POS_THRESHOLD
+from detection_utils.boxes import DEFAULT_NEG_THRESHOLD
 
 from typing import NamedTuple
 
@@ -31,7 +31,7 @@ __all__ = ["confusion_matrix", "precision_and_recall"]
 def confusion_matrix(
     prediction_detections: ndarray,
     truth_detections: ndarray,
-    threshold: float = DEFAULT_POS_THRESHOLD,
+    threshold: float = DEFAULT_NEG_THRESHOLD,
     num_foreground_classes: int = 3,
 ) -> np.ndarray:
     """ Compute confusion matrix to evaluate the accuracy of a classification.
@@ -52,7 +52,7 @@ def confusion_matrix(
     truth_detections : numpy.ndarray, shape=(K, 5)
         The ground-truth objects in (left, top, right, bottom, class) format.
 
-    threshold : Real, optional (default=0.5)
+    threshold : Real, optional
         The IoU threshold above which a predicted box will be associated
         with an overlapping truth box.
 
