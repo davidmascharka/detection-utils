@@ -7,7 +7,7 @@ import numpy as np
 import torch as tr
 from matplotlib.patches import Rectangle
 
-__all__ = ["plot_img", "draw_detections"]
+__all__ = ["plot_img", "draw_detections", "plot_confusion_matrix"]
 
 
 def asarray(x: Union[np.ndarray, tr.Tensor]) -> np.ndarray:
@@ -17,7 +17,12 @@ def asarray(x: Union[np.ndarray, tr.Tensor]) -> np.ndarray:
         return np.asarray(x)
 
 
-label_lookup: Dict[int, str] = {1: "rectangle", 2: "triangle", 3: "circle"}
+label_lookup: Dict[int, str] = {
+    0: "background",
+    1: "rectangle",
+    2: "triangle",
+    3: "circle",
+}
 
 
 def plot_img(
@@ -61,3 +66,30 @@ def draw_detections(
         if class_pred is not None:
             label = label_lookup[int(class_pred)]
             ax.annotate(label, (x1, y1), color="r", fontsize=24)
+
+
+def plot_confusion_matrix(
+    matrix: np.ndarray, font_size: Optional[int] = None, **plt_kwargs
+) -> Tuple[plt.Figure, plt.Axes]:
+    fig, ax = plt.subplots(**plt_kwargs)
+
+    ax.set_title("confusion matrix")
+    labels = [label_lookup[i] for i in sorted(label_lookup)]
+
+    ax.set_xticks(np.arange(len(labels)))
+    ax.set_yticks(np.arange(len(labels)))
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
+    ax.xaxis.tick_top()
+
+    if font_size:
+        for item in (
+            [ax.title, ax.xaxis.label, ax.yaxis.label]
+            + ax.get_xticklabels()
+            + ax.get_yticklabels()
+        ):
+            item.set_fontsize(font_size)
+
+    im = ax.imshow(matrix, vmin=0.0, vmax=1.0)
+    fig.colorbar(im)
+    return fig, ax

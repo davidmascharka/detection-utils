@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch as tr
@@ -8,11 +9,13 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.tensorboard.writer import SummaryWriter
 
 from detection_utils.boxes import generate_targets
+from detection_utils.demo.plot import draw_detections, plot_confusion_matrix, plot_img
 
 from ..pytorch import softmax_focal_loss
-from .boxes import compute_batch_stats, DEFAULT_NMS_THRESHOLD
+from .boxes import DEFAULT_NMS_THRESHOLD, compute_batch_stats
 
 
 def loss(
@@ -187,8 +190,19 @@ class ShapeDetectionModel(pl.LightningModule):
             feature_map_width=imgs.shape[2] // 16,  # backbone downsamples by factor 16
         )
 
-        normed_conf_matrix = confusion_matrix / tr.sum(
-            confusion_matrix, dim=0, keepdim=True
+        ap = precision.mean()
+        ar = recall.mean()
+        self.log("val_precision", ap)
+        self.log("val_recall", ar)
+
+        self.log("ap+ar", ap + ar)
+        return confusion_matrix
+
+    def validation_epoch_end(self, outputs: List[Any]) -> None:
+        """Plots confusion matrix and example validation image with detections"""
+        total_confusion_matrix = sum(outputs)
+        normed_conf_matrix = total_confusion_matrix / tr.sum(
+            total_confusion_matrix, dim=0, keepdim=True
         )
 
         # note: exclude negatives from classification accuracy
@@ -197,12 +211,21 @@ class ShapeDetectionModel(pl.LightningModule):
         )
         self.log("val_acc", val_acc)
 
-        ap = precision.mean()
-        ar = recall.mean()
-        self.log("val_precision", ap)
-        self.log("val_recall", ar)
+        tensorboard: SummaryWriter = self.logger.experiment
+        fig, ax = plot_confusion_matrix(
+            normed_conf_matrix, font_size=15, figsize=(8, 8)
+        )
+        tensorboard.add_figure("confusion-matrix", fig, global_step=self.current_epoch)
 
-        self.log("ap+ar+acc", ap + ar + val_acc)
+        img_id = 0
+
+        boxes, labels, scores = zip(
+            *self.get_detections(self.val_images[:1].to(self.device))
+        )
+
+        fig, ax = plot_img(self.val_images[img_id], figsize=(8, 8))
+        draw_detections(ax, boxes=boxes[img_id], labels=labels[img_id])
+        tensorboard.add_figure("example-image", fig, global_step=self.current_epoch)
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=5e-4)
