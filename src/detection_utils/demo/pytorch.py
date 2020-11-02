@@ -1,7 +1,8 @@
+from pytorch_lightning.loggers import LoggerCollection
+
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
 import torch as tr
@@ -15,6 +16,7 @@ from detection_utils.boxes import generate_targets
 from detection_utils.demo.plot import draw_detections, plot_confusion_matrix, plot_img
 
 from ..pytorch import softmax_focal_loss
+
 from .boxes import DEFAULT_NMS_THRESHOLD, compute_batch_stats
 
 
@@ -90,6 +92,13 @@ def loss(
 class ShapeDetectionModel(pl.LightningModule):
     def __init__(self, data_experiment_path: Optional[Union[str, Path]] = None):
         super().__init__()
+        self.confusion_matrices: List[np.ndarray] = []
+
+        # stores info for plotting boxes/labels for val-image 0
+        # at subsequent epoch states of model
+        # [(boxes-epoch0, labels-epoch0, scores-epoch0), ...]
+        self.boxes_labels_scores: List[Tuple[np.ndarray, np.ndarray, np.ndarray]] = []
+
         self.data_path = (
             Path(data_experiment_path) if data_experiment_path is not None else None
         )
@@ -205,27 +214,34 @@ class ShapeDetectionModel(pl.LightningModule):
             total_confusion_matrix, dim=0, keepdim=True
         )
 
+        normed_conf_matrix = np.nan_to_num(normed_conf_matrix.numpy())
+
+        self.confusion_matrices.append(normed_conf_matrix)
+
         # note: exclude negatives from classification accuracy
         val_acc = tr.einsum("ii", normed_conf_matrix[1:, 1:]) / (
             len(normed_conf_matrix) - 1
         )
         self.log("val_acc", val_acc)
 
-        tensorboard: SummaryWriter = self.logger.experiment
-        fig, ax = plot_confusion_matrix(
-            normed_conf_matrix, font_size=15, figsize=(8, 8)
-        )
-        tensorboard.add_figure("confusion-matrix", fig, global_step=self.current_epoch)
-
-        img_id = 0
-
         boxes, labels, scores = zip(
             *self.get_detections(self.val_images[:1].to(self.device))
         )
+        self.boxes_labels_scores.append((boxes[0], labels[0], scores[0]))
 
-        fig, ax = plot_img(self.val_images[img_id], figsize=(8, 8))
-        draw_detections(ax, boxes=boxes[img_id], labels=labels[img_id])
-        tensorboard.add_figure("example-image", fig, global_step=self.current_epoch)
+        tensorboard: SummaryWriter = self._get_tensorboard_logger()
+        if tensorboard is not None:
+            fig, ax = plot_confusion_matrix(
+                normed_conf_matrix, font_size=15, figsize=(8, 8)
+            )
+            tensorboard.add_figure(
+                "confusion-matrix", fig, global_step=self.current_epoch
+            )
+
+            img_id = 0
+            fig, ax = plot_img(self.val_images[img_id], figsize=(8, 8))
+            draw_detections(ax, boxes=boxes[img_id], labels=labels[img_id])
+            tensorboard.add_figure("example-image", fig, global_step=self.current_epoch)
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=5e-4)
@@ -337,3 +353,12 @@ class ShapeDetectionModel(pl.LightningModule):
             )
             for cls, regr in zip(class_predictions, regression_predictions)
         ]
+
+    def _get_tensorboard_logger(self) -> Optional[SummaryWriter]:
+        if isinstance(self.logger.experiment, SummaryWriter):
+            return self.logger.experiment
+        elif isinstance(self.logger, LoggerCollection):
+            for logger in self.logger.experiment:
+                if isinstance(logger, SummaryWriter):
+                    return logger
+        return None

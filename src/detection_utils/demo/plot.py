@@ -52,6 +52,11 @@ def draw_detections(
 
     if labels is None:
         labels = [None] * len(boxes)
+    else:
+        # filter non-background for efficient slider
+        not_background = labels.squeeze() != 0
+        boxes = boxes[not_background]
+        labels = labels[not_background]
 
     assert len(boxes) == len(labels)
 
@@ -69,9 +74,12 @@ def draw_detections(
 
 
 def plot_confusion_matrix(
-    matrix: np.ndarray, font_size: Optional[int] = None, **plt_kwargs
-) -> Tuple[plt.Figure, plt.Axes]:
-    fig, ax = plt.subplots(**plt_kwargs)
+    matrix: np.ndarray, font_size: Optional[int] = None, ax=None, **plt_kwargs
+) -> Tuple[Optional[plt.Figure], plt.Axes]:
+    if ax is None:
+        fig, ax = plt.subplots(**plt_kwargs)
+    else:
+        fig = None
 
     ax.set_title("confusion matrix")
     labels = [label_lookup[i] for i in sorted(label_lookup)]
@@ -91,5 +99,6 @@ def plot_confusion_matrix(
             item.set_fontsize(font_size)
 
     im = ax.imshow(matrix, vmin=0.0, vmax=1.0)
-    fig.colorbar(im)
+    if fig is not None:
+        fig.colorbar(im)
     return fig, ax
