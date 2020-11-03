@@ -88,6 +88,10 @@ def compute_detections(
     -------
     Tuple[numpy.ndarray shape=(N_det, 4), numpy.ndarray shape=(N_det, 1), numpy.ndarray shape=(N_det,)]
         The (boxes, class predictions, foreground scores) for each detection above the specified threshold(s)
+
+    Notes
+    -----
+    Boxes are reported as (xlo, ylo, xhi, yhi).
     """
     box_predictions = np.empty((len(regressions), 4), dtype=np.float32)
     scores = tr.softmax(classifications, dim=-1).detach().cpu().numpy()

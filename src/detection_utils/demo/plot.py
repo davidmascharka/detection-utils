@@ -45,9 +45,39 @@ def plot_img(
 
 
 def draw_detections(
-    ax, *, boxes: np.ndarray, labels: Optional[np.ndarray] = None, color="r", lw=2
+    ax: plt.Axes,
+    *,
+    boxes: np.ndarray,
+    labels: Optional[np.ndarray] = None,
+    label_associations: Dict[int, str] = dict(label_lookup),
+    box_color: str = "r",
+    box_line_width: int = 2,
+    label_fontsize: int = 24
 ):
+    """
+    Draws detection boxes/labels on an existing image.
 
+    Parameters
+    ----------
+    ax : Axes
+        The image axis object on which the detections will be drawn.
+
+    boxes : ndarray, shape-(N, 4)
+        The detection boxes, each box is formatted as (xlo, ylo, xhi, yhi)
+        in pixel space.
+
+    labels : Optional[ndarray], shape-(N,)
+        The integer classification label associated with each box.
+
+    label_associations : Dict[int, str]
+        int -> label
+
+    box_color : str, optional (default=red)
+
+    box_line_width : int, optional (default=2)
+
+    label_fontsize : int, optional (default=24)
+    """
     assert boxes.ndim == 2 and boxes.shape[1] == 4
 
     if labels is None:
@@ -66,23 +96,64 @@ def draw_detections(
 
         x1, y1, x2, y2 = box_pred
         ax.add_patch(
-            Rectangle((x1, y1), x2 - x1, y2 - y1, color=color, fill=None, lw=lw)
+            Rectangle(
+                (x1, y1),
+                x2 - x1,
+                y2 - y1,
+                color=box_color,
+                fill=None,
+                lw=box_line_width,
+            )
         )
         if class_pred is not None:
-            label = label_lookup[int(class_pred)]
-            ax.annotate(label, (x1, y1), color="r", fontsize=24)
+            label = label_associations[int(class_pred)]
+            ax.annotate(label, (x1, y1), color="r", fontsize=label_fontsize)
 
 
 def plot_confusion_matrix(
-    matrix: np.ndarray, font_size: Optional[int] = None, ax=None, **plt_kwargs
+    matrix: np.ndarray,
+    ax: Optional[plt.Axes] = None,
+    font_size: Optional[int] = None,
+    include_colorbar: bool = True,
+    label_associations: Dict[int, str] = dict(label_lookup),
+    **plt_kwargs
 ) -> Tuple[Optional[plt.Figure], plt.Axes]:
+    """
+    Plots a confusion matrix.
+
+    Parameters
+    ----------
+    matrix : ndarray, shape-(N_class, N_class)
+        The confusion matrix
+
+    ax : Optional[Axes]
+        If specified, the axis object on which the confusion matrix
+        will be drawn. Otherwise a new figure/axes pair will be created
+
+    font_size : Optional[int]
+
+    include_colorbar: bool, optional (default=True)
+
+    label_associations : Dict[int, str]
+        int -> label
+
+    plt_kwargs
+        Keyword arguments passed to ``plt.subplots(...)``; used only
+        if ``ax`` is not specified.
+
+    Returns
+    -------
+    Tuple[Optional[plt.Figure], plt.Axes]
+        The figure and axis object associated with the plot. Figure is
+        ``None`` if the user supplied ``ax``.
+    """
     if ax is None:
         fig, ax = plt.subplots(**plt_kwargs)
     else:
         fig = None
 
     ax.set_title("confusion matrix")
-    labels = [label_lookup[i] for i in sorted(label_lookup)]
+    labels = [label_associations[i] for i in sorted(label_associations)]
 
     ax.set_xticks(np.arange(len(labels)))
     ax.set_yticks(np.arange(len(labels)))
@@ -99,6 +170,6 @@ def plot_confusion_matrix(
             item.set_fontsize(font_size)
 
     im = ax.imshow(matrix, vmin=0.0, vmax=1.0)
-    if fig is not None:
+    if fig is not None and include_colorbar:
         fig.colorbar(im)
     return fig, ax

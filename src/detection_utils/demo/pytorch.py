@@ -229,7 +229,7 @@ class ShapeDetectionModel(pl.LightningModule):
         )
         self.boxes_labels_scores.append((boxes[0], labels[0], scores[0]))
 
-        tensorboard: SummaryWriter = self._get_tensorboard_logger()
+        tensorboard: Optional[SummaryWriter] = self._get_tensorboard_logger()
         if tensorboard is not None:
             fig, ax = plot_confusion_matrix(
                 normed_conf_matrix, font_size=15, figsize=(8, 8)
@@ -327,10 +327,16 @@ class ShapeDetectionModel(pl.LightningModule):
         -------
         List[Tuple[np.ndarray, np.ndarray, np.ndarray]]
             The (boxes, labels, and confidence scores) for each of the N images
+            - boxes: ndarray shape=(N_det, 4)
+            - labels : ndarray shape=(N_det, 1)
+            - scores : ndarray shape=(N_det,)]
 
         Notes
         -----
-        The anchor boxes are flattened in row-major order"""
+        The anchor boxes are flattened in row-major order.
+
+        Boxes are reported as (xlo, ylo, xhi, yhi).
+        """
         from detection_utils.demo.boxes import compute_detections
 
         was_training = self.training
