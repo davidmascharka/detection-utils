@@ -51,6 +51,7 @@ def draw_detections(
     labels: Optional[np.ndarray] = None,
     label_associations: Dict[int, str] = dict(label_lookup),
     box_color: str = "r",
+    font_color: Optional[str] = None,
     box_line_width: int = 2,
     label_fontsize: int = 24
 ):
@@ -74,6 +75,9 @@ def draw_detections(
 
     box_color : str, optional (default=red)
 
+    font_color : Optional[str]
+        If not specified, matches ``box_color``
+
     box_line_width : int, optional (default=2)
 
     label_fontsize : int, optional (default=24)
@@ -89,6 +93,9 @@ def draw_detections(
         labels = labels[not_background]
 
     assert len(boxes) == len(labels)
+
+    if font_color is None:
+        font_color = box_color
 
     for class_pred, box_pred in zip(labels, boxes):
         if class_pred is not None and class_pred == 0:
@@ -107,7 +114,7 @@ def draw_detections(
         )
         if class_pred is not None:
             label = label_associations[int(class_pred)]
-            ax.annotate(label, (x1, y1), color="r", fontsize=label_fontsize)
+            ax.annotate(label, (x1, y1), color=font_color, fontsize=label_fontsize)
 
 
 def plot_confusion_matrix(
