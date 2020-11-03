@@ -11,6 +11,7 @@ from ..metrics import (
 
 DEFAULT_BOX_STEP = 16
 DEFAULT_BOX_SIZE = 32
+DEFAULT_BOX_OFFSET = 6
 
 
 def make_anchor_boxes(
@@ -18,7 +19,8 @@ def make_anchor_boxes(
     image_height: int,
     image_width: int,
     box_size=DEFAULT_BOX_SIZE,
-    box_stride=DEFAULT_BOX_STEP
+    box_stride=DEFAULT_BOX_STEP,
+    box_offset=DEFAULT_BOX_OFFSET,
 ) -> np.ndarray:
     """
 
@@ -28,11 +30,14 @@ def make_anchor_boxes(
     image_width : int
     box_size : int, optional
     box_stride : int, optional
+    box_offset : float, optional
+        Offsets all anchor boxes by a constant offset in order
+        to center boxes on receptive field.
 
     Returns
     -------
     anchor_boxes : numpy.ndarray, shape-(K, 4)
-        K strided anchor boxes, specified in row-major order. Each anchore
+        K strided anchor boxes, specified in row-major order. Each anchor
         box is specified as (x-low, y-low, x-high, y-high)
     """
     anchor_boxes = []
@@ -42,7 +47,7 @@ def make_anchor_boxes(
                 np.array([-box_size // 2, -box_size // 2, box_size // 2, box_size // 2])
                 + np.array([x, y, x, y])
             )
-    return np.vstack(anchor_boxes)
+    return np.vstack(anchor_boxes) + box_offset
 
 
 def compute_detections(
@@ -51,6 +56,7 @@ def compute_detections(
     feature_map_width: int,
     anchor_box_step: int = DEFAULT_BOX_STEP,
     anchor_box_size: int = DEFAULT_BOX_SIZE,
+    anchor_box_offset: int = DEFAULT_BOX_OFFSET,
     score_threshold: Optional[float] = None,
     nms_threshold: float = DEFAULT_NMS_THRESHOLD,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -76,6 +82,10 @@ def compute_detections(
 
     anchor_box_size : int, optional
         The side length of the anchor box.
+
+    anchor_box_offset : float, optional
+        Offsets all anchor boxes by a constant offset in order
+        to center boxes on receptive field.
 
     score_threshold: Optional[float]
         If specified, detections with foreground scores below this
@@ -108,8 +118,8 @@ def compute_detections(
 
     # transform (R*C, 4) to (4, R*C) for assignment
     (x_reg, y_reg, w_reg, h_reg,) = regressions.T
-    x = anchor_box_step * x + anchor_box_size * x_reg
-    y = anchor_box_step * y + anchor_box_size * y_reg
+    x = anchor_box_step * x + anchor_box_offset + anchor_box_size * x_reg
+    y = anchor_box_step * y + anchor_box_offset + anchor_box_size * y_reg
 
     half_w = np.clip(np.exp(w_reg), 0, 10 ** 6) * anchor_box_size / 2
     half_h = np.clip(np.exp(h_reg), 0, 10 ** 6) * anchor_box_size / 2
@@ -141,6 +151,7 @@ def compute_batch_stats(
     feature_map_width: int,
     anchor_box_step: int = DEFAULT_BOX_STEP,
     anchor_box_size: int = DEFAULT_BOX_SIZE,
+    anchor_box_offset: int = DEFAULT_BOX_OFFSET,
     score_threshold: Optional[float] = None,
     nms_iou_threshold: float = DEFAULT_NMS_THRESHOLD,
 ) -> Tuple[tr.Tensor, tr.Tensor, tr.Tensor]:
@@ -171,6 +182,10 @@ def compute_batch_stats(
     anchor_box_size : int, optional
         The side length of each anchor box.
 
+    anchor_box_offset : float, optional
+        Offsets all anchor boxes by a constant offset in order
+        to center boxes on receptive field.
+
     score_threshold: Optional[float]
         If specified, detections with foreground scores below this
         threshold are ignored
@@ -196,8 +211,9 @@ def compute_batch_stats(
             class_predictions[i],
             regression_predictions[i],
             feature_map_width,
-            anchor_box_step,
-            anchor_box_size,
+            anchor_box_step=anchor_box_step,
+            anchor_box_size=anchor_box_size,
+            anchor_box_offset=anchor_box_offset,
             score_threshold=score_threshold,
             nms_threshold=nms_iou_threshold,
         )

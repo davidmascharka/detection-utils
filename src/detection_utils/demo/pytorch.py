@@ -219,7 +219,7 @@ class ShapeDetectionModel(pl.LightningModule):
         self.confusion_matrices.append(normed_conf_matrix)
 
         # note: exclude negatives from classification accuracy
-        val_acc = tr.einsum("ii", normed_conf_matrix[1:, 1:]) / (
+        val_acc = np.einsum("ii", normed_conf_matrix[1:, 1:]) / (
             len(normed_conf_matrix) - 1
         )
         self.log("val_acc", val_acc)
