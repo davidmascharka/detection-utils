@@ -33,13 +33,15 @@ with open(r"./lightning_logs/version_49/confusion_matrices.pkl", "rb") as f:
 ```
 
 ```python
-kwargs= dict(figsize=(8, 8), font_size=15)
+kwargs = dict(figsize=(8, 8), font_size=15)
+
 
 def f(epoch):
     ax.cla()
-    plot_confusion_matrix(conf_matrices[epoch], ax=ax, **kwargs)
+    plot_confusion_matrix(conf_matrices[epoch - 1], ax=ax, **kwargs)
     fig.canvas.draw()
     display(fig)
+
 
 fig, ax = plot_confusion_matrix(conf_matrices[0], **kwargs)
 ```
