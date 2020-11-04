@@ -50,17 +50,57 @@ Each entry in the feature map contains:
 </div>
 
 
-## Teaching Our Model: Loss Function
+## Teaching Our Model: The Loss Function
 
-Our loss is the sum of two components:
+Our loss is a weighted sum of two components:
 
-1. The regression loss applies [smooth L1 loss](https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html) between the true and predicted bounding box centers (each scaled by the anchor box length), and the true and predicted bounding box extents (scaled by the anchor box width and log-scaled).
+1. The **regression loss** applies [smooth L1 loss](https://pytorch.org/docs/stable/generated/torch.nn.SmoothL1Loss.html) between the true and predicted bounding box centers (each scaled by the anchor box length), and the true and predicted bounding box extents (scaled by the anchor box width and log-scaled).
 
-2. The [focal loss](https://arxiv.org/abs/1708.02002) adaptation to the softmax cross-entropy loss. This loss is designed to ameliorate the extreme class imbalance that occurs between background and foreground regions in images, by severely down-weighting contributions made by confident correct class predictions. Crucially, the accumulated loss summed over all of the anchor boxes is divided only by the number of true foreground anchor boxes. 
+2. The **classification loss** is the [focal loss](https://arxiv.org/abs/1708.02002) - an adaptation to the softmax cross-entropy loss. This loss is designed to ameliorate the extreme class imbalance that occurs between background and foreground regions in images, by severely down-weighting contributions made by confident correct class predictions. Crucially, the accumulated loss summed over all of the anchor boxes is divided only by the number of true foreground anchor boxes. 
 
 
 <div style="text-align: center">
 <p>
 <img src="./pics/loss_diagram.png" alt="Depicting the loss feedback mechanism">
+</p>
+</div>
+
+
+## Detection Thresholds: Non-Max Suppression
+
+Because our detector will make detections for densely overlapping regions of our image, it will likely yield multiple detections for any given object.
+
+
+
+<div style="text-align: center">
+<p>
+<img src="./pics/no_nms.png" alt="'Raw detections are highly redundant" width=400>
+</p>
+</div>
+
+
+**We need a mechanism for culling these detections down to a reliable set of distinct detections.**
+To achieve this, we use a technique known as non-max suppression (NMS).
+
+The process of NMS allows us to first prioritize detections that have the highest confidence score for being a foreground example, and then removing all other predicted detections that overlap with these high-confidence detections.
+We measure overlap between two detections using the so-called Jaccard index, or, more simply: the ratio of area of their intersection to the area of their union (IoU).
+
+
+<div style="text-align: center">
+<p>
+<img src="./pics/IoU.png" alt="Depicting the IoU quantity" width=450>
+</p>
+</div>
+
+> Image by Adrian Rosebrock - [source](http://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/), CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=57718560
+
+
+Thus **we must set a threshold to determine the maximum overlap that is permitted between two detections.**
+To develop some intuition for this, let's see how our retained detections change as we adjust this IoU threshold.
+
+
+<div style="text-align: center">
+<p>
+<img src="./pics/nms_examples.png" alt="Demonstrating the effect of NMS thresholding">
 </p>
 </div>
