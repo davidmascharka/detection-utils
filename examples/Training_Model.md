@@ -23,14 +23,14 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning import loggers as pl_loggers
 
-
+import pickle
 ```
 
 ```python
 model = ShapeDetectionModel(data_experiment_path="./data")
 checkpointer = ModelCheckpoint(
     monitor="ap+ar",
-    save_top_k=10,
+    save_top_k=-1,
     save_last=True,
     mode="max",
     period=3,

@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 import warnings
 
 
-with open(r"./lightning_logs/version_49/confusion_matrices.pkl", "rb") as f:
+with open(r"./lightning_logs/version_53/confusion_matrices.pkl", "rb") as f:
     conf_matrices = pickle.load(f)
 ```
 

@@ -27,7 +27,7 @@ from IPython.display import display
 import matplotlib.pyplot as plt
 
 
-with open(r"./lightning_logs/version_49/val_img_1_info.pkl", "rb") as f:
+with open(r"./lightning_logs/version_53/val_img_1_info.pkl", "rb") as f:
     boxes_labels_scores = pickle.load(f)
     
 from detection_utils.demo.pytorch import ShapeDetectionModel
