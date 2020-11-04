@@ -53,7 +53,7 @@ def draw_detections(
     box_color: str = "r",
     font_color: Optional[str] = None,
     box_line_width: int = 2,
-    label_fontsize: int = 24
+    label_fontsize: int = 24,
 ):
     """
     Draws detection boxes/labels on an existing image.
@@ -123,7 +123,9 @@ def plot_confusion_matrix(
     font_size: Optional[int] = None,
     include_colorbar: bool = True,
     label_associations: Dict[int, str] = dict(label_lookup),
-    **plt_kwargs
+    x_label: Optional[str] = None,
+    y_label: Optional[str] = None,
+    **plt_kwargs,
 ) -> Tuple[Optional[plt.Figure], plt.Axes]:
     """
     Plots a confusion matrix.
@@ -143,6 +145,10 @@ def plot_confusion_matrix(
 
     label_associations : Dict[int, str]
         int -> label
+
+    x_label : Optional[str]
+
+    y_label : Optional[str]
 
     plt_kwargs
         Keyword arguments passed to ``plt.subplots(...)``; used only
@@ -168,6 +174,9 @@ def plot_confusion_matrix(
     ax.set_yticklabels(labels)
     ax.xaxis.tick_top()
 
+    ax.set_title(x_label)
+    ax.set_ylabel(y_label)
+
     if font_size:
         for item in (
             [ax.title, ax.xaxis.label, ax.yaxis.label]
@@ -179,4 +188,5 @@ def plot_confusion_matrix(
     im = ax.imshow(matrix, vmin=0.0, vmax=1.0)
     if fig is not None and include_colorbar:
         fig.colorbar(im)
+
     return fig, ax
