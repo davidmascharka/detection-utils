@@ -129,7 +129,7 @@ class ShapeDetectionModel(pl.LightningModule):
 
         nn.init.constant_(
             self.classification.bias[0], -4.6
-        )  # rougly -log((1-π)/π) for π = 0.01
+        )  # roughly -log((1-π)/π) for π = 0.01
 
     def forward(self, imgs: Tensor) -> Tuple[Tensor, Tensor]:
         """"
@@ -179,7 +179,7 @@ class ShapeDetectionModel(pl.LightningModule):
         self.log("train_loss", total_cls_loss + total_reg_loss)
         return tot_loss
 
-    def validation_step(self, batch: Tuple[Tensor, ...], batch_idx: int):
+    def validation_step(self, batch: Tuple[Tensor, ...], batch_idx: int) -> Tensor:
         imgs, class_targets, bbox_targets = batch
         class_predictions, regression_predictions = self(imgs)
 
