@@ -1,0 +1,5 @@
+SPDXVersion: SPDX-2.1
+PackageName: detection-utils
+PackageOriginator: MIT Lincoln Laboratory
+PackageHomePage: https://github.com/davidmascharka/detection-utils
+PackageLicenseDeclared: MIT
