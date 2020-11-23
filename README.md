@@ -1,7 +1,9 @@
 # detection-utils
 > Written by [David Mascharka](https://github.com/davidmascharka), [Ryan Soklaski](https://github.com/rsokl), and [Arjun Majumdar](https://github.com/arjunmajum)
 
-![build status](https://img.shields.io/travis/davidmascharka/detection-utils.svg)
+![build status](https://img.shields.io/travis/davidmascharka/detection-utils.svg) 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4287380.svg)](https://doi.org/10.5281/zenodo.4287380)
+
 
 Common functionality for object detection
 
