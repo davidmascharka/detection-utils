@@ -15,8 +15,8 @@ CLASSIFIERS = [
     "Intended Audience :: Education",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
     "Topic :: Scientific/Engineering",
 ]
 INSTALL_REQUIRES = ['numpy >= 1.13', 'numba >= 0.38']
@@ -53,7 +53,7 @@ if __name__ == '__main__':
           url=URL,
           version=versioneer.get_version(),
           cmdclass=versioneer.get_cmdclass(),
-          python_requires='>=3.6',
+          python_requires='>=3.7',
           packages=find_packages(where='src', exclude=['tests*']),
           package_dir={'': 'src'},
           )
