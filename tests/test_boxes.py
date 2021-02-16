@@ -26,7 +26,7 @@ from numpy import ndarray
 from numpy.testing import assert_allclose, assert_array_equal
 
 import hypothesis.strategies as st
-from hypothesis import given
+from hypothesis import given, settings
 import hypothesis.extra.numpy as hnp
 
 from detection_utils.boxes import (
@@ -103,6 +103,7 @@ class Test_box_overlaps:
         """ Ensures that correctness for hand-crafted overlapping boxes. """
         assert_allclose(actual=box_overlaps(predicted, truth), desired=overlap)
 
+    @settings(deadline=500)
     @given(
         boxes=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(4))),
         truth=hnp.arrays(dtype=float, shape=st.tuples(st.integers(0, 100), st.just(4))),
