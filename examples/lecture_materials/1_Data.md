@@ -51,5 +51,4 @@ We have three data files for each of our training and validation sets:
 - number of objects in that image.
 
 Our `boxes` array stores boxes in `(left, top, right, bottom)` format, which we refer to as
-`xyxy`. We'll discuss the data in more detail when we get to it. For now, let's cover our basic
-imports.
+`xyxy`. We'll discuss the data in more detail when we get to it. 
