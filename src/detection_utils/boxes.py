@@ -24,6 +24,11 @@ import numpy as np
 from numpy import ndarray
 
 
+DEFAULT_POS_THRESHOLD = 0.3
+DEFAULT_NEG_THRESHOLD = 0.2
+DEFAULT_NMS_THRESHOLD = 0.1
+
+
 @numba.njit
 def box_overlaps(
         predicted: ndarray,
@@ -87,8 +92,8 @@ def generate_targets(
         anchor_boxes: ndarray,
         truth_boxes: ndarray,
         labels: ndarray,
-        pos_thresh: float = 0.3,
-        neg_thresh: float = 0.2,
+        pos_thresh: float = DEFAULT_POS_THRESHOLD,
+        neg_thresh: float = DEFAULT_NEG_THRESHOLD,
         eps: float = 1e-12,
 ) -> Tuple[ndarray, ndarray]:
     """ Generate classification and regression targets from ground-truth boxes.
@@ -123,7 +128,7 @@ def generate_targets(
 
     Returns
     -------
-    Tuple[numpy.ndarray shape=(N,), numpy.ndarray shape=(N, 4)]
+    Tuple[numpy.ndarray shape=(N, K), numpy.ndarray shape=(N, K, 4)]
         The classification and bounding box regression targets for each anchor box. Regressions
         are of format (x-center, y-center, width, height). Classification targets of 0 indicate
         background, while targets of -1 indicate that this prediction should be ignored as a
@@ -177,11 +182,12 @@ def generate_targets(
 def non_max_suppression(
         boxes: ndarray,
         scores: ndarray,
-        threshold: float = 0.7,
+        threshold: float = DEFAULT_NMS_THRESHOLD,
         clip_value: float = 1e6,
         eps: float = 1e-12,
 ) -> ndarray:
-    """ Return the indices of non-suppressed detections after applying non-maximum suppression with the given threshold.
+    """ Return the indices of non-suppressed detections after applying non-maximum suppression
+    with the given threshold.
 
     Parameters
     ----------
@@ -191,7 +197,7 @@ def non_max_suppression(
     scores : np.ndarray[Real], shape=(N,)
         The detection score for each box.
 
-    threshold : float ∈ [0, 1], optional (default=0.7)
+    threshold : float ∈ [0, 1], optional
         The IoU threshold to use for NMS, above which one of two box will be suppressed.
 
     clip_value : Real, optional (default=1e6)
@@ -203,7 +209,8 @@ def non_max_suppression(
     Returns
     -------
     np.ndarray[int], shape=(k,)
-        The (sorted) subset of detections to keep, where k is the number of non-suppressed inputs and k <= N.
+        The (sorted) subset of detections to keep, where k is the number of non-suppressed inputs
+        and k <= N.
 
     Examples
     --------
